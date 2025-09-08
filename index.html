@@ -83,66 +83,67 @@
 
 <script>
 // ===========================
-// SAFE-FOOD DATABASE (atomic combos + items)
-// All values are per-serving approximations (kcal, protein g, carbs g, fat g).
-// Add or edit entries here as your safe-food library grows.
+// SAFE-FOOD DATABASE
+// Added portionable + min/max + unit fields for sensible scaling
 // ===========================
 const FOODS = [
-  // Cereals / breakfast combos
-  { id:"cereal_fairlife", name:"Protein Cheerios + Fairlife whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"]},
-  { id:"cinnamon_cheerios", name:"Protein Cheerios (Cinnamon) + Horizon whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"]},
-  { id:"bagel_cc", name:"Bagel + cream cheese", kcal:320, p:9, c:55, f:8, tags:["combo"]},
-  { id:"oatmeal_pkt", name:"Quaker Oatmeal (Maple & Brown Sugar pkt)", kcal:160, p:4, c:33, f:2, tags:["food"]},
+  { id:"cereal_fairlife", name:"Protein Cheerios + Fairlife whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"], portionable:false},
+  { id:"cinnamon_cheerios", name:"Protein Cheerios (Cinnamon) + Horizon whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"], portionable:false},
+  { id:"bagel_cc", name:"Bagel + cream cheese", kcal:320, p:9, c:55, f:8, tags:["combo"], portionable:false},
+  { id:"oatmeal_pkt", name:"Quaker Oatmeal (Maple & Brown Sugar pkt)", kcal:160, p:4, c:33, f:2, tags:["food"], portionable:false},
 
-  // Milks (used inside combos ideally)
-  { id:"fairlife_cup", name:"Fairlife whole milk (1 cup)", kcal:150, p:13, c:6, f:8, tags:["milk"]},
-  { id:"horizon_cup", name:"Horizon whole milk (1 cup)", kcal:150, p:13, c:12, f:8, tags:["milk"]},
+  { id:"fairlife_cup", name:"Fairlife whole milk (1 cup)", kcal:150, p:13, c:6, f:8, tags:["milk"], portionable:false},
+  { id:"horizon_cup", name:"Horizon whole milk (1 cup)", kcal:150, p:13, c:12, f:8, tags:["milk"], portionable:false},
 
-  // Meat / protein combos (ketchup included for tenders/nuggets)
-  { id:"cheeseburger", name:"Cheeseburger (single patty + bun + ketchup)", kcal:430, p:30, c:32, f:16, tags:["meat","combo"]},
-  { id:"tenders_4", name:"Frozen breaded chicken tenders (4 pcs) + ketchup", kcal:280, p:26.5, c:12.5, f:14.5, tags:["meat","combo"]},
-  { id:"tenders_6", name:"Chicken tenders (6 pcs) + ketchup", kcal:390, p:36, c:18, f:18, tags:["meat","combo"]},
-  { id:"impossible_nuggets", name:"Impossible Nuggets (5 pcs) + ketchup", kcal:240, p:13, c:19, f:12, tags:["meat","combo"]},
-  { id:"fishsticks", name:"Fish sticks (serv) + ketchup", kcal:350, p:16, c:32, f:18, tags:["meat","combo"]},
+  { id:"cheeseburger", name:"Cheeseburger (single patty + bun + ketchup)", kcal:430, p:30, c:32, f:16, tags:["meat","combo"], portionable:false},
+  { id:"tenders", name:"Chicken tenders + ketchup", kcal:65, p:6, c:3.125, f:3.625, tags:["meat","combo"], portionable:true, min:2, max:6, unit:"tender"},
+  { id:"impossible_nuggets", name:"Impossible Nuggets + ketchup", kcal:48, p:2.6, c:3.8, f:2.4, tags:["meat","combo"], portionable:true, min:1, max:5, unit:"nugget"},
+  { id:"fishsticks", name:"Fish sticks + ketchup", kcal:70, p:3.2, c:6.4, f:3.6, tags:["meat","combo"], portionable:true, min:1, max:6, unit:"piece"},
 
-  // Sides (atomic combos include ketchup where appropriate)
-  { id:"rice_butter", name:"White jasmine rice (1 cup cooked) + Kerrygold butter (1 tsp) + NuSalt", kcal:275, p:4, c:45, f:9, tags:["carb","combo"]},
-  { id:"rice_1cup", name:"White jasmine rice (1 cup cooked)", kcal:240, p:4, c:45, f:8, tags:["carb"]},
-  { id:"tots_120", name:"Tater tots (120 g) + ketchup", kcal:360, p:3, c:45, f:17, tags:["carb","combo"]},
-  { id:"fries_80", name:"French fries (80 g) + ketchup", kcal:200, p:2.5, c:30, f:8, tags:["carb","combo"]},
-  { id:"annies_mac", name:"Annie's Protein Mac & Cheese (1serv)", kcal:320, p:15, c:60, f:6, tags:["carb"]},
-  { id:"barilla_protein_pasta", name:"Barilla Protein+ pasta + marinara (1serv)", kcal:190, p:17, c:35, f:2, tags:["carb"]},
-  { id:"corn_cup", name:"Corn (1 cup)", kcal:200, p:4, c:31, f:4, tags:["carb"]},
+  { id:"rice_butter", name:"White jasmine rice + butter + NuSalt (1cup)", kcal:275, p:4, c:45, f:9, tags:["carb","combo"], portionable:true, min:1, max:3, unit:"cup"},
+  { id:"tots_120", name:"Tater tots + ketchup (120g)", kcal:360, p:3, c:45, f:17, tags:["carb","combo"], portionable:false},
+  { id:"fries_80", name:"French fries + ketchup (80g)", kcal:200, p:2.5, c:30, f:8, tags:["carb","combo"], portionable:false},
+  { id:"annies_mac", name:"Annie's Protein Mac & Cheese", kcal:320, p:15, c:60, f:6, tags:["carb"], portionable:false},
+  { id:"barilla_protein_pasta", name:"Barilla Protein+ pasta + marinara", kcal:190, p:17, c:35, f:2, tags:["carb"], portionable:false},
+  { id:"corn_cup", name:"Corn (1 cup)", kcal:200, p:4, c:31, f:4, tags:["carb"], portionable:false},
 
-  // Shakes / Creami (count toward shake limit). We'll treat portions as full only here.
-  { id:"ghost_1", name:"Ghost Protein (1 scoop) + Horizon whole milk (1 cup)", kcal:250, p:30, c:12, f:5, tags:["shake"]},
-  { id:"carnation_rtd", name:"Carnation Breakfast Essentials RTD (1 bottle)", kcal:220, p:15, c:27, f:6, tags:["shake"]},
-  { id:"creami_vanilla", name:"Vanilla Protein Base Creami (1serv)", kcal:210, p:38, c:10, f:2, tags:["shake"]},
-  { id:"creami_cookies", name:"Cookies & Cream Protein Ice Cream (1serv)", kcal:170, p:26, c:6, f:3, tags:["shake"]},
-  { id:"creami_brownie", name:"Brownie Batter Protein Creami (1serv)", kcal:220, p:35, c:13, f:3, tags:["shake"]},
-  { id:"creami_birthday", name:"Birthday Cake Protein Creami (1serv)", kcal:200, p:36, c:9, f:2, tags:["shake"]},
-  { id:"creami_sundae", name:"Brownie Sundae Remix Creami (1serv)", kcal:330, p:42, c:28, f:6, tags:["shake"]},
+  { id:"ghost_1", name:"Ghost Protein + Horizon whole milk", kcal:250, p:30, c:12, f:5, tags:["shake"], portionable:false},
+  { id:"carnation_rtd", name:"Carnation Breakfast Essentials RTD", kcal:220, p:15, c:27, f:6, tags:["shake"], portionable:false},
+  { id:"creami_vanilla", name:"Vanilla Protein Base Creami", kcal:210, p:38, c:10, f:2, tags:["shake"], portionable:false},
+  { id:"creami_cookies", name:"Cookies & Cream Protein Ice Cream", kcal:170, p:26, c:6, f:3, tags:["shake"], portionable:false},
+  { id:"creami_brownie", name:"Brownie Batter Protein Creami", kcal:220, p:35, c:13, f:3, tags:["shake"], portionable:false},
+  { id:"creami_birthday", name:"Birthday Cake Protein Creami", kcal:200, p:36, c:9, f:2, tags:["shake"], portionable:false},
+  { id:"creami_sundae", name:"Brownie Sundae Remix Creami", kcal:330, p:42, c:28, f:6, tags:["shake"], portionable:false},
 
-  // Snacks & desserts
-  { id:"oui_vanilla", name:"Oui Vanilla yogurt (1 jar)", kcal:180, p:5, c:20, f:8, tags:["snack"]},
-  { id:"ricekrispie", name:"Rice Krispie Treat (1 bar)", kcal:120, p:2, c:17, f:3, tags:["snack"]},
-  { id:"brownie_creami_half", name:"Brownie Creami (0.5serv) - treat", kcal:110, p:17.5, c:6.5, f:1.5, tags:["snack"]},
-  { id:"fitcrunch_half", name:"FitCrunch 1/2 bar", kcal:95, p:8, c:7.5, f:4, tags:["snack"]},
+  { id:"oui_vanilla", name:"Oui Vanilla yogurt", kcal:180, p:5, c:20, f:8, tags:["snack"], portionable:false},
+  { id:"ricekrispie", name:"Rice Krispie Treat", kcal:120, p:2, c:17, f:3, tags:["snack"], portionable:false},
+  { id:"chobani_flip", name:"Chobani Flip (S'mores/Cookie Dough/Bday/Cookies & Cream)", kcal:160, p:9, c:21, f:4.5, tags:["snack"], portionable:false},
 
-  // Chobani Flip (snack/variety)
-  { id:"chobani_flip", name:"Chobani Flip (S'mores/Cookie Dough/Bday/Cookies & Cream)", kcal:160, p:9, c:21, f:4.5, tags:["snack"]},
-
-  // Extras that might be used as single items
-  { id:"banana", name:"Banana (med)", kcal:105, p:1, c:27, f:0, tags:["snack"]},
-  { id:"apple", name:"Apple (med)", kcal:80, p:0, c:22, f:0, tags:["snack"]}
+  { id:"banana", name:"Banana (med)", kcal:105, p:1, c:27, f:0, tags:["snack"], portionable:false},
+  { id:"apple", name:"Apple (med)", kcal:80, p:0, c:22, f:0, tags:["snack"], portionable:false}
 ];
 
-// Helper functions
+// ===========================
+// Helpers
+// ===========================
 function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
 function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-// params helpers
+function pickPortion(food){
+  if(!food.portionable) return {...food, qty:1};
+  const qty = rand(food.min, food.max);
+  return {
+    ...food,
+    qty,
+    kcal: food.kcal*qty,
+    p: food.p*qty,
+    c: food.c*qty,
+    f: food.f*qty,
+    name:`${food.name} x${qty} ${food.unit}${qty>1?'s':''}`
+  };
+}
+
 function getTargetsFromUI(){
   const calT = Number(document.getElementById('calTarget').value);
   const calR = Number(document.getElementById('calRange').value);
@@ -165,212 +166,149 @@ function getTargetsFromUI(){
   };
 }
 
-// Compute day score (lower = better). We weight protein highest.
+function isShake(item){ return item.tags && item.tags.includes('shake'); }
+
 function scoreCandidate(totals, targets){
   const pMid = (targets.pMin + targets.pMax)/2;
   const cMid = (targets.cMin + targets.cMax)/2;
   const fMid = (targets.fMin + targets.fMax)/2;
   const calMid = (targets.calMin + targets.calMax)/2;
-  // weighted absolute distance
-  const score = Math.abs(totals.p - pMid)*4 + Math.abs(totals.c - cMid)*2 + Math.abs(totals.f - fMid)*1 + Math.abs(totals.cal - calMid)*0.2;
-  // penalize shake overuse or repeats (shouldn't happen due to checks, but defend)
-  return score;
+  return Math.abs(totals.p - pMid)*4 + Math.abs(totals.c - cMid)*2 + Math.abs(totals.f - fMid)*1 + Math.abs(totals.cal - calMid)*0.2;
 }
 
-// Check if food counts as a full shake/creami slot
-function isShake(item){ return item.tags && item.tags.includes('shake'); }
-
-// Build a single candidate day with given mealCount and constraints.
-// Returns {meals: [[food,food]], totals, shakesUsed} or null if impossible.
-function buildCandidate(mealCount, params){
+// ===========================
+// Day generation logic
+// ===========================
+function buildCandidate(mealCount){
   const maxShakes = Number(document.getElementById('maxShakes').value);
   const maxRepeats = Number(document.getElementById('maxRepeats').value);
 
-  // We'll assemble meals one by one. For each meal, pick 1-3 items (favor variety, but randomized).
-  let meals = [];
-  let totals = {cal:0,p:0,c:0,f:0};
-  let shakesUsed = 0;
-  const mealNameCounts = {}; // track repeats of exact meal signature
-
-  // to encourage inclusion of protein sources, we'll ensure at least one "meat" or shake is included early
-  // get lists for sampling
-  const foodPool = clone(FOODS);
+  let meals = [], totals = {cal:0,p:0,c:0,f:0}, shakesUsed = 0, foodCounts={};
 
   for(let m=0;m<mealCount;m++){
+    let mealItems=[];
     let itemCount = rand(1,3);
-    let mealItems = [];
     let attempts = 0;
-    while(mealItems.length < itemCount && attempts < 40){
+    while(mealItems.length<itemCount && attempts<40){
       attempts++;
-      // prefer non-duplicate items within day unless repeats allowed
-      // pick candidate random food
-      const candidate = sample(foodPool);
+      const candidate = pickPortion(sample(FOODS));
 
-      // check shakes cap: if candidate is a shake and adding it exceeds shake cap, skip
-      if(isShake(candidate) && (shakesUsed + 1 > maxShakes)) {
-        continue;
-      }
+      if(isShake(candidate) && shakesUsed+1>maxShakes) continue;
+      if((foodCounts[candidate.id]||0)+1>maxRepeats) continue;
 
-      // If adding this item would cause a meal signature repeat beyond allowed repeats, skip
-      // We'll approximate: check if this food would cause any single food to exceed maxRepeats
-      const currentCount = (mealNameCounts[candidate.id]||0);
-      if(currentCount + 1 > maxRepeats) {
-        // skip this candidate (too many repeats)
-        // but allow once in a rare case to ensure feasibility
-        continue;
-      }
-
-      // Add item
       mealItems.push(candidate);
-      // update day totals and counters
-      totals.cal += candidate.kcal; totals.p += candidate.p; totals.c += candidate.c; totals.f += candidate.f;
+      totals.cal += candidate.kcal;
+      totals.p += candidate.p;
+      totals.c += candidate.c;
+      totals.f += candidate.f;
       if(isShake(candidate)) shakesUsed++;
-      mealNameCounts[candidate.id] = (mealNameCounts[candidate.id]||0) + 1;
+      foodCounts[candidate.id]=(foodCounts[candidate.id]||0)+1;
     }
-
-    // If we couldn't build items for this meal, fail the candidate
-    if(mealItems.length === 0) return null;
-
-    // Avoid creating an identical meal signature too many times (same exact item list repeating)
-    const sig = mealItems.map(x=>x.id).sort().join('|');
-    const sigCount = Object.values(mealNameCounts).filter(x=>x>0).length;
-    // push meal
-    meals.push({items: mealItems});
+    if(mealItems.length===0) return null;
+    meals.push({items:mealItems});
   }
-
   return {meals, totals, shakesUsed};
 }
 
-// Try to generate the best day for provided mealCount. Run many random attempts and return best match.
 function findBestForMealCount(mealCount, params){
-  const attempts = 2200; // increase if you want more thorough search
-  let best = null;
-  for(let i=0;i<attempts;i++){
-    const cand = buildCandidate(mealCount, params);
+  let best=null;
+  for(let i=0;i<2200;i++){
+    const cand=buildCandidate(mealCount);
     if(!cand) continue;
-    // quick reject if totals exceed calorie max
-    if(cand.totals.cal > params.calMax) continue;
-    // compute score
+    if(cand.totals.cal>params.calMax) continue;
     const score = scoreCandidate(cand.totals, params);
-    if(!best || score < best.score) {
-      cand.score = score;
-      best = cand;
-    }
-    // if it already meets all ranges, return immediately
-    if(cand.totals.p >= params.pMin && cand.totals.p <= params.pMax &&
-       cand.totals.c >= params.cMin && cand.totals.c <= params.cMax &&
-       cand.totals.f >= params.fMin && cand.totals.f <= params.fMax &&
-       cand.totals.cal >= params.calMin && cand.totals.cal <= params.calMax) {
-         return cand;
-       }
+    if(!best || score<best.score){ cand.score=score; best=cand; }
+    if(cand.totals.p>=params.pMin && cand.totals.p<=params.pMax &&
+       cand.totals.c>=params.cMin && cand.totals.c<=params.cMax &&
+       cand.totals.f>=params.fMin && cand.totals.f<=params.fMax &&
+       cand.totals.cal>=params.calMin && cand.totals.cal<=params.calMax) return cand;
   }
   return best;
 }
 
-// Main generate
 function generate(){
-  const targets = getTargetsFromUI();
-  const mealCountChoice = document.getElementById('mealCount').value;
-  const maxShakesUI = Number(document.getElementById('maxShakes').value);
-  const maxRepeatsUI = Number(document.getElementById('maxRepeats').value);
+  const targets=getTargetsFromUI();
+  const mealCountChoice=document.getElementById('mealCount').value;
+  const params={...targets};
 
-  // pack params
-  const params = {
-    calMin: targets.calMin, calMax: targets.calMax,
-    pMin: targets.pMin, pMax: targets.pMax,
-    cMin: targets.cMin, cMax: targets.cMax,
-    fMin: targets.fMin, fMax: targets.fMax
-  };
-
-  let candidates = [];
-  if(mealCountChoice === 'optimal'){
-    // evaluate 3..5 and choose best-scoring candidate
+  let candidates=[];
+  if(mealCountChoice==='optimal'){
     for(let m=3;m<=5;m++){
-      const cand = findBestForMealCount(m, params);
-      if(cand) candidates.push(Object.assign({mealCount:m}, cand));
+      const cand=findBestForMealCount(m, params);
+      if(cand) candidates.push(Object.assign({mealCount:m},cand));
     }
-    if(candidates.length === 0){
-      document.getElementById('result').innerHTML = `<div class="card"><strong>No plan found.</strong> Try widening ranges, increasing shakes, or allowing more repeats.</div>`;
+    if(candidates.length===0){
+      document.getElementById('result').innerHTML=`<div class="card"><strong>No plan found.</strong></div>`;
       return;
     }
-    // pick lowest score
-    candidates.sort((a,b)=>a.score - b.score);
-    var best = candidates[0];
+    candidates.sort((a,b)=>a.score-b.score);
+    var best=candidates[0];
   } else {
-    const m = Number(mealCountChoice);
-    const cand = findBestForMealCount(m, params);
-    if(!cand){
-      document.getElementById('result').innerHTML = `<div class="card"><strong>No plan found for ${m} meals.</strong> Try widening ranges, increasing shakes, or allowing more repeats.</div>`;
-      return;
-    }
-    var best = Object.assign({mealCount:m}, cand);
+    const m=Number(mealCountChoice);
+    const cand=findBestForMealCount(m, params);
+    if(!cand){ document.getElementById('result').innerHTML=`<div class="card"><strong>No plan found for ${m} meals.</strong></div>`; return;}
+    var best=Object.assign({mealCount:m}, cand);
   }
 
   renderResult(best, params);
 }
 
-// Render a chosen plan
+// ===========================
+// Rendering + CSV export
+// ===========================
 function renderResult(plan, params){
-  const out = document.getElementById('result');
-  // build HTML
-  let html = `<div class="card"><h3>Generated Day — ${plan.mealCount} meals</h3>`;
-  let grand = {cal:0,p:0,c:0,f:0};
-  plan.meals.forEach((meal, idx)=>{
-    // calculate meal subtotal
+  const out=document.getElementById('result');
+  let html=`<div class="card"><h3>Generated Day — ${plan.mealCount} meals</h3>`;
+  let grand={cal:0,p:0,c:0,f:0};
+  plan.meals.forEach((meal,idx)=>{
     let mcal=0, mp=0, mc=0, mf=0;
-    html += `<h4>Meal ${idx+1}</h4><table><thead><tr><th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
+    html+=`<h4>Meal ${idx+1}</h4><table><thead><tr><th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
     meal.items.forEach(it=>{
-      html += `<tr><td>${it.name}</td><td>${it.kcal}</td><td>${it.p}</td><td>${it.c}</td><td>${it.f}</td></tr>`;
-      mcal += it.kcal; mp += it.p; mc += it.c; mf += it.f;
+      html+=`<tr><td>${it.name}</td><td>${it.kcal.toFixed(0)}</td><td>${it.p.toFixed(1)}</td><td>${it.c.toFixed(1)}</td><td>${it.f.toFixed(1)}</td></tr>`;
+      mcal+=it.kcal; mp+=it.p; mc+=it.c; mf+=it.f;
     });
-    html += `<tr style="font-weight:700"><td>Meal subtotal</td><td>${mcal.toFixed(1)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
-    html += `</tbody></table>`;
-    grand.cal += mcal; grand.p += mp; grand.c += mc; grand.f += mf;
+    html+=`<tr style="font-weight:700"><td>Meal subtotal</td><td>${mcal.toFixed(0)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
+    html+=`</tbody></table>`;
+    grand.cal+=mcal; grand.p+=mp; grand.c+=mc; grand.f+=mf;
   });
 
-  html += `<div style="margin-top:10px"><span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
-           <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
-           <span class="pill">Carbs: <strong>${grand.c.toFixed(1)} g</strong></span>
-           <span class="pill">Fat: <strong>${grand.f.toFixed(1)} g</strong></span></div>`;
+  html+=`<div style="margin-top:10px"><span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
+         <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
+         <span class="pill">Carbs: <strong>${grand.c.toFixed(1)} g</strong></span>
+         <span class="pill">Fat: <strong>${grand.f.toFixed(1)} g</strong></span></div>`;
 
-  // target check
-  const okP = (grand.p >= params.pMin && grand.p <= params.pMax);
-  const okC = (grand.c >= params.cMin && grand.c <= params.cMax);
-  const okF = (grand.f >= params.fMin && grand.f <= params.fMax);
-  const okCal = (grand.cal >= params.calMin && grand.cal <= params.calMax);
+  const okP=(grand.p>=params.pMin&&grand.p<=params.pMax);
+  const okC=(grand.c>=params.cMin&&grand.c<=params.cMax);
+  const okF=(grand.f>=params.fMin&&grand.f<=params.fMax);
+  const okCal=(grand.cal>=params.calMin&&grand.cal<=params.calMax);
 
-  html += `<div class="card"><h4>Target check</h4>
-            <p>Protein: ${params.pMin}–${params.pMax} → ${okP?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
-            <p>Carbs: ${params.cMin}–${params.cMax} → ${okC?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
-            <p>Fat: ${params.fMin}–${params.fMax} → ${okF?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
-            <p>Calories: ${params.calMin}–${params.calMax} → ${okCal?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
-           </div>`;
+  html+=`<div class="card"><h4>Target check</h4>
+        <p>Protein: ${params.pMin}–${params.pMax} → ${okP?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
+        <p>Carbs: ${params.cMin}–${params.cMax} → ${okC?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
+        <p>Fat: ${params.fMin}–${params.fMax} → ${okF?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
+        <p>Calories: ${params.calMin}–${params.calMax} → ${okCal?'<span class="ok">OK</span>':'<span class="warn">OUT</span>'}</p>
+       </div>`;
+  html+=`<div class="small muted">Supplements suggested: Emerald Labs Men\\'s 1-Daily Multi (breakfast); NOW Super Omega 3-6-9 (lunch/dinner); Magnesium Glycinate (evening); optional Creatine with a shake.</div>`;
+  html+=`</div>`;
+  out.innerHTML=html;
 
-  html += `<div class="small muted">Supplements suggested: Emerald Labs Men\\'s 1-Daily Multi (breakfast); NOW Super Omega 3-6-9 (lunch/dinner); Magnesium Glycinate (evening); optional Creatine with a shake.</div>`;
-
-  html += `</div>`;
-  out.innerHTML = html;
-
-  // Save for export
-  window._lastPlan = {plan, totals:grand};
+  window._lastPlan={plan,totals:grand};
 }
 
-// CSV export
 function exportCSV(){
   if(!window._lastPlan){ alert('Generate a plan first'); return; }
-  const rows = [['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
+  const rows=[['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
   window._lastPlan.plan.meals.forEach((meal,mi)=>{
     meal.items.forEach(it=>{
-      rows.push([`Meal ${mi+1}`, it.name, 1, it.kcal.toFixed(1), it.p.toFixed(1), it.c.toFixed(1), it.f.toFixed(1)]);
+      rows.push([`Meal ${mi+1}`, it.name, it.qty||1, it.kcal.toFixed(0), it.p.toFixed(1), it.c.toFixed(1), it.f.toFixed(1)]);
     });
   });
-  rows.push(['TOTAL','', '', window._lastPlan.totals.cal.toFixed(1), window._lastPlan.totals.p.toFixed(1), window._lastPlan.totals.c.toFixed(1), window._lastPlan.totals.f.toFixed(1)]);
-  const csv = rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='mealplan.csv'; a.click(); URL.revokeObjectURL(url);
+  rows.push(['TOTAL','', '', window._lastPlan.totals.cal.toFixed(0), window._lastPlan.totals.p.toFixed(1), window._lastPlan.totals.c.toFixed(1), window._lastPlan.totals.f.toFixed(1)]);
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob([csv], {type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='mealplan.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
-// initialize with a plan
 generate();
 </script>
 </body>
