@@ -1,238 +1,150 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Safe Foods — Meal Plan Generator (Advanced)</title>
+  <meta charset="UTF-8">
+  <title>Custom Meal Plan Generator</title>
   <style>
-    :root{--bg:#f7fafc;--card:#fff;--muted:#64748b;--accent:#06b6d4}
-    body{font-family:Inter,system-ui,-apple-system,Arial;margin:18px;background:var(--bg);color:#0f172a}
-    h1{margin:0 0 8px}
-    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(11,20,37,0.06);margin-bottom:12px}
-    label{display:inline-block;margin-right:10px;font-size:14px}
-    input[type=number], select { padding:6px; margin-right:10px; width:110px; }
-    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-    button{background:var(--accent);color:white;border:none;padding:9px 12px;border-radius:8px;cursor:pointer}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
-    .pill{display:inline-block;padding:8px 12px;border-radius:999px;background:#eef2f7;margin-right:8px}
-    .muted{color:var(--muted)}
-    .ok{color:green}.warn{color:crimson}
-    .small{font-size:13px;color:var(--muted)}
-    .footer-note{font-size:13px;color:#334155;margin-top:8px}
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { font-size: 24px; }
+    label { display: block; margin-top: 10px; }
+    table { border-collapse: collapse; margin-top: 15px; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #f4f4f4; }
+    .meal { margin-bottom: 30px; }
   </style>
 </head>
 <body>
-  <h1>Safe Foods — Meal Plan Generator</h1>
+  <h1>Safe Foods Meal Plan Generator</h1>
+  <label>Protein target (g): <input id="proteinTarget" type="number" value="190"></label>
+  <label>Protein ± range (g): <input id="proteinRange" type="number" value="10"></label>
 
-  <div class="card">
-    <div class="small muted">Use your safe-foods template. Set targets (center ± range), shakes/creami cap, meal repeats, and choose Meals or Optimal (auto-select 3–5). Generate a realistic day (3–5 meals) built from atomic combos.</div>
-    <div style="height:10px"></div>
+  <label>Carbs target (g): <input id="carbTarget" type="number" value="220"></label>
+  <label>Carbs ± range (g): <input id="carbRange" type="number" value="20"></label>
 
-    <div class="controls">
-      <div>
-        <label>Calories target</label><br>
-        <input id="calTarget" type="number" value="2500" /> ± <input id="calRange" type="number" value="200" />
-      </div>
+  <label>Fat target (g): <input id="fatTarget" type="number" value="65"></label>
+  <label>Fat ± range (g): <input id="fatRange" type="number" value="10"></label>
 
-      <div>
-        <label>Protein target (g)</label><br>
-        <input id="pTarget" type="number" value="190" /> ± <input id="pRange" type="number" value="15" />
-      </div>
+  <label>Calories target: <input id="calTarget" type="number" value="2600"></label>
+  <label>Calories ± range: <input id="calRange" type="number" value="200"></label>
 
-      <div>
-        <label>Carb target (g)</label><br>
-        <input id="cTarget" type="number" value="215" /> ± <input id="cRange" type="number" value="15" />
-      </div>
+  <label>Max shakes/creami per day: <input id="maxShakes" type="number" value="2" min="0"></label>
+  <label>Max meal repeats: <input id="mealRepeats" type="number" value="1" min="1"></label>
 
-      <div>
-        <label>Fat target (g)</label><br>
-        <input id="fTarget" type="number" value="65" /> ± <input id="fRange" type="number" value="10" />
-      </div>
+  <label>Meals per day: 
+    <select id="mealCount">
+      <option value="optimal">Optimal</option>
+      <option value="3">3 meals</option>
+      <option value="4">4 meals</option>
+      <option value="5">5 meals</option>
+    </select>
+  </label>
 
-      <div>
-        <label>Meals</label><br>
-        <select id="mealCount">
-          <option value="3">3</option>
-          <option value="4" selected>4</option>
-          <option value="5">5</option>
-          <option value="optimal">Optimal (3–5)</option>
-        </select>
-      </div>
+  <button onclick="generatePlan()">Generate Meal Plan</button>
 
-      <div>
-        <label>Max shakes/creami (full portions)</label><br>
-        <input id="maxShakes" type="number" value="2" />
-      </div>
-
-      <div>
-        <label>Meal repeats allowed</label><br>
-        <input id="maxRepeats" type="number" value="1" />
-      </div>
-
-      <div style="min-width:200px">
-        <button onclick="generate()">Generate Day</button>
-        <button onclick="exportCSV()" style="background:#2563eb;margin-left:8px">Export CSV</button>
-      </div>
-    </div>
-
-    <div class="footer-note">Notes: "Atomic combos" (cereal+milk, tenders+ketchup, rice+butter) are built-in. The generator tries many randomized candidate days and returns the best match to your targets. If no plan is found, widen ranges or increase shakes/meal repeats.</div>
-  </div>
-
-  <div id="result"></div>
+  <div id="output"></div>
 
 <script>
-// ===========================
-// SAFE-FOOD DATABASE (atomic combos + items)
-// ===========================
-const FOODS=[
-  { id:"cereal_fairlife", name:"Protein Cheerios + Fairlife whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"]},
-  { id:"cinnamon_cheerios", name:"Protein Cheerios (Cinnamon) + Horizon whole milk (1serv)", kcal:300, p:16, c:36, f:10.5, tags:["combo"]},
-  { id:"bagel_cc", name:"Bagel + cream cheese", kcal:320, p:9, c:55, f:8, tags:["combo"]},
-  { id:"oatmeal_pkt", name:"Quaker Oatmeal (Maple & Brown Sugar pkt)", kcal:160, p:4, c:33, f:2, tags:["food"]},
-  { id:"fairlife_cup", name:"Fairlife whole milk (1 cup)", kcal:150, p:13, c:6, f:8, tags:["milk"]},
-  { id:"horizon_cup", name:"Horizon whole milk (1 cup)", kcal:150, p:13, c:12, f:8, tags:["milk"]},
-  { id:"cheeseburger", name:"Cheeseburger (single patty + bun + ketchup)", kcal:430, p:30, c:32, f:16, tags:["meat","combo"]},
-  { id:"tenders_4", name:"Frozen breaded chicken tenders (4 pcs) + ketchup", kcal:280, p:26.5, c:12.5, f:14.5, tags:["meat","combo"]},
-  { id:"tenders_6", name:"Chicken tenders (6 pcs) + ketchup", kcal:390, p:36, c:18, f:18, tags:["meat","combo"]},
-  { id:"impossible_nuggets", name:"Impossible Nuggets (5 pcs) + ketchup", kcal:240, p:13, c:19, f:12, tags:["meat","combo"]},
-  { id:"fishsticks", name:"Fish sticks (serv) + ketchup", kcal:350, p:16, c:32, f:18, tags:["meat","combo"]},
-  { id:"rice_butter", name:"White jasmine rice (1 cup cooked) + Kerrygold butter (1 tsp) + NuSalt", kcal:275, p:4, c:45, f:9, tags:["carb","combo"]},
-  { id:"rice_1cup", name:"White jasmine rice (1 cup cooked)", kcal:240, p:4, c:45, f:8, tags:["carb"]},
-  { id:"tots_120", name:"Tater tots (120 g) + ketchup", kcal:360, p:3, c:45, f:17, tags:["carb","combo"]},
-  { id:"fries_80", name:"French fries (80 g) + ketchup", kcal:200, p:2.5, c:30, f:8, tags:["carb","combo"]},
-  { id:"annies_mac", name:"Annie's Protein Mac & Cheese (1serv)", kcal:320, p:15, c:60, f:6, tags:["carb"]},
-  { id:"barilla_protein_pasta", name:"Barilla Protein+ pasta + marinara (1serv)", kcal:190, p:17, c:35, f:2, tags:["carb"]},
-  { id:"corn_cup", name:"Corn (1 cup)", kcal:200, p:4, c:31, f:4, tags:["carb"]},
-  { id:"ghost_1", name:"Ghost Protein (1 scoop) + Horizon whole milk (1 cup)", kcal:250, p:30, c:12, f:5, tags:["shake"]},
-  { id:"carnation_rtd", name:"Carnation Breakfast Essentials RTD (1 bottle)", kcal:220, p:15, c:27, f:6, tags:["shake"]},
-  { id:"creami_vanilla", name:"Vanilla Protein Base Creami (1serv)", kcal:210, p:38, c:10, f:2, tags:["shake"]},
-  { id:"creami_cookies", name:"Cookies & Cream Protein Ice Cream (1serv)", kcal:170, p:26, c:6, f:3, tags:["shake"]},
-  { id:"creami_brownie", name:"Brownie Batter Protein Creami (1serv)", kcal:220, p:35, c:13, f:3, tags:["shake"]},
-  { id:"creami_birthday", name:"Birthday Cake Protein Creami (1serv)", kcal:200, p:36, c:9, f:2, tags:["shake"]},
-  { id:"creami_sundae", name:"Brownie Sundae Remix Creami (1serv)", kcal:330, p:42, c:28, f:6, tags:["shake"]},
-  { id:"oui_vanilla", name:"Oui Vanilla yogurt (1 jar)", kcal:180, p:5, c:20, f:8, tags:["snack"]},
-  { id:"ricekrispie", name:"Rice Krispie Treat (1 bar)", kcal:120, p:2, c:17, f:3, tags:["snack"]},
-  { id:"brownie_creami_half", name:"Brownie Creami (0.5serv) - treat", kcal:110, p:17.5, c:6.5, f:1.5, tags:["snack"]},
-  { id:"fitcrunch_half", name:"FitCrunch 1/2 bar", kcal:95, p:8, c:7.5, f:4, tags:["snack"]},
-  { id:"chobani_flip", name:"Chobani Flip (S'mores/Cookie Dough/Bday/Cookies & Cream)", kcal:160, p:9, c:21, f:4.5, tags:["snack"]},
-  { id:"banana", name:"Banana (med)", kcal:105, p:1, c:27, f:0, tags:["snack"]},
-  { id:"apple", name:"Apple (med)", kcal:80, p:0, c:22, f:0, tags:["snack"]}
+const foods = [
+  { name: "Quaker Oatmeal (Maple packet)", kcal:160, p:4, c:33, f:2 },
+  { name: "Bagel + cream cheese", kcal:300, p:9, c:55, f:6 },
+  { name: "Cereal + whole milk (Cheerios)", kcal:280, p:9, c:42, f:8 },
+  { name: "Cereal + Fairlife milk (Protein Cheerios)", kcal:300, p:16, c:36, f:10.5 },
+  { name: "Oui Vanilla Yogurt + Granola", kcal:250, p:7, c:32, f:9 },
+  { name: "Chobani Flip (various flavors)", kcal:160, p:9, c:21, f:4.5 },
+  { name: "Carnation Breakfast Essentials HP", kcal:220, p:15, c:27, f:6 },
+  { name: "Ghost Protein + Horizon milk", kcal:250, p:30, c:12, f:5 },
+  { name: "Brownie Protein Creami", kcal:220, p:35, c:13, f:3 },
+  { name: "Vanilla Protein Creami", kcal:210, p:38, c:10, f:2 },
+  { name: "Cookies & Cream Protein Creami", kcal:170, p:26, c:6, f:3 },
+  { name: "Chicken tenders (breaded frozen) + ketchup", kcal:280, p:26.5, c:12.5, f:14.5 },
+  { name: "Impossible Nuggets (5pc) + ketchup", kcal:260, p:14, c:20, f:12.5 },
+  { name: "Fish sticks + ketchup", kcal:250, p:12, c:20, f:14 },
+  { name: "Cheeseburger (patty + bun + ketchup)", kcal:430, p:30, c:32, f:16 },
+  { name: "Beef slider (mini cheeseburger + ketchup)", kcal:240, p:16, c:16, f:8 },
+  { name: "Hot dog + bun + ketchup", kcal:310, p:11, c:28, f:18 },
+  { name: "Tony’s Pizza (1/4 pizza)", kcal:330, p:12, c:38, f:14 },
+  { name: "White/Jasmine Rice + Kerrygold butter + salt", kcal:250, p:5, c:45, f:6 },
+  { name: "Annie’s Protein Mac", kcal:320, p:15, c:60, f:6 },
+  { name: "Barilla Protein+ Pasta + marinara", kcal:190, p:17, c:35, f:2 },
+  { name: "French fries + ketchup", kcal:300, p:4, c:50, f:12 },
+  { name: "Tater tots + ketchup", kcal:280, p:4, c:40, f:14 },
+  { name: "Corn + butter & garlic", kcal:180, p:4, c:30, f:6 },
+  { name: "Apple slices", kcal:80, p:0, c:22, f:0 },
+  { name: "Banana", kcal:105, p:1, c:27, f:0 },
+  { name: "Grapes", kcal:90, p:0, c:23, f:0 },
+  { name: "Strawberries", kcal:50, p:1, c:12, f:0 },
+  { name: "Watermelon", kcal:90, p:1, c:23, f:0 },
+  { name: "Rice Krispy Treat", kcal:90, p:1, c:18, f:2 },
+  { name: "FitCrunch Bar", kcal:190, p:16, c:15, f:8 }
 ];
 
-function clone(obj){return JSON.parse(JSON.stringify(obj))}
-function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
-function sample(arr){return arr[Math.floor(Math.random()*arr.length)]}
-
-function getTargetsFromUI(){
-  const calT=Number(document.getElementById('calTarget').value);
-  const calR=Number(document.getElementById('calRange').value);
-  const pT=Number(document.getElementById('pTarget').value);
-  const pR=Number(document.getElementById('pRange').value);
-  const cT=Number(document.getElementById('cTarget').value);
-  const cR=Number(document.getElementById('cRange').value);
-  const fT=Number(document.getElementById('fTarget').value);
-  const fR=Number(document.getElementById('fRange').value);
-
-  return {
-    calMin:Math.max(0,calT-calR), calMax:calT+calR,
-    pMin:Math.max(0,pT-pR), pMax:pT+pR,
-    cMin:Math.max(0,cT-cR), cMax:cT+cR,
-    fMin:Math.max(0,fT-fR), fMax:fT+fR
-  };
+// Check if food is shake/creami
+function isShakeOrCreami(food) {
+  return /(Ghost Protein|Carnation Breakfast|Creami)/.test(food.name);
 }
 
-function scoreCandidate(totals,targets){
-  const pMid=(targets.pMin+targets.pMax)/2;
-  const cMid=(targets.cMin+targets.cMax)/2;
-  const fMid=(targets.fMin+targets.fMax)/2;
-  const calMid=(targets.calMin+targets.calMax)/2;
-  return Math.abs(totals.p-pMid)*4+Math.abs(totals.c-cMid)*2+Math.abs(totals.f-fMid)*1+Math.abs(totals.cal-calMid)*0.2;
-}
+function generatePlan() {
+  const pTarget = parseInt(document.getElementById("proteinTarget").value);
+  const pRange = parseInt(document.getElementById("proteinRange").value);
+  const cTarget = parseInt(document.getElementById("carbTarget").value);
+  const cRange = parseInt(document.getElementById("carbRange").value);
+  const fTarget = parseInt(document.getElementById("fatTarget").value);
+  const fRange = parseInt(document.getElementById("fatRange").value);
+  const calTarget = parseInt(document.getElementById("calTarget").value);
+  const calRange = parseInt(document.getElementById("calRange").value);
 
-function isShake(item){return item.tags && item.tags.includes('shake')}
+  const maxShakes = parseInt(document.getElementById("maxShakes").value);
+  const mealRepeats = parseInt(document.getElementById("mealRepeats").value);
+  const mealCountSel = document.getElementById("mealCount").value;
 
-function buildCandidate(mealCount,params){
-  const maxShakes=Number(document.getElementById('maxShakes').value);
-  const maxRepeats=Number(document.getElementById('maxRepeats').value);
-  let meals=[], totals={cal:0,p:0,c:0,f:0}, shakesUsed=0;
-  const mealNameCounts={};
-  const foodPool=clone(FOODS);
-
-  for(let m=0;m<mealCount;m++){
-    let itemCount=rand(1,3), mealItems=[], attempts=0;
-    while(mealItems.length<itemCount && attempts<40){
-      attempts++;
-      const candidate=sample(foodPool);
-      if(isShake(candidate) && shakesUsed+1>maxShakes) continue;
-      const currentCount=(mealNameCounts[candidate.id]||0);
-      if(currentCount+1>maxRepeats) continue;
-
-      mealItems.push(candidate);
-      totals.cal+=candidate.kcal; totals.p+=candidate.p; totals.c+=candidate.c; totals.f+=candidate.f;
-      if(isShake(candidate)) shakesUsed++;
-      mealNameCounts[candidate.id]=(mealNameCounts[candidate.id]||0)+1;
-    }
-    if(mealItems.length===0) return null;
-    meals.push({items:mealItems});
-  }
-  return {meals,totals,shakesUsed};
-}
-
-function findBestForMealCount(mealCount,params){
-  const attempts=2200; let best=null;
-  for(let i=0;i<attempts;i++){
-    const cand=buildCandidate(mealCount,params); if(!cand) continue;
-    if(cand.totals.cal>params.calMax) continue;
-    const score=scoreCandidate(cand.totals,params);
-    if(!best || score<best.score){ cand.score=score; best=cand; }
-    if(cand.totals.p>=params.pMin && cand.totals.p<=params.pMax &&
-       cand.totals.c>=params.cMin && cand.totals.c<=params.cMax &&
-       cand.totals.f>=params.fMin && cand.totals.f<=params.fMax &&
-       cand.totals.cal>=params.calMin && cand.totals.cal<=params.calMax){ return cand; }
-  }
-  return best;
-}
-
-function generate(){
-  const targets=getTargetsFromUI();
-  const mealCountChoice=document.getElementById('mealCount').value;
-  const params={calMin:targets.calMin, calMax:targets.calMax,
-                pMin:targets.pMin, pMax:targets.pMax,
-                cMin:targets.cMin, cMax:targets.cMax,
-                fMin:targets.fMin, fMax:targets.fMax};
-  let candidates=[];
-  if(mealCountChoice==='optimal'){
-    for(let m=3;m<=5;m++){
-      const cand=findBestForMealCount(m,params);
-      if(cand) candidates.push(Object.assign({mealCount:m},cand));
-    }
-    if(candidates.length===0){ document.getElementById('result').innerHTML='<div class="card"><strong>No plan found.</strong> Try widening ranges, increasing shakes, or allowing more repeats.</div>'; return; }
-    candidates.sort((a,b)=>a.score-b.score);
-    var best=candidates[0];
+  let mealCount;
+  if (mealCountSel === "optimal") {
+    if (calTarget < 2400) mealCount = 3;
+    else if (calTarget < 2800) mealCount = 4;
+    else mealCount = 5;
   } else {
-    const m=Number(mealCountChoice);
-    const cand=findBestForMealCount(m,params);
-    if(!cand){ document.getElementById('result').innerHTML=`<div class="card"><strong>No plan found for ${m} meals.</strong> Try widening ranges, increasing shakes, or allowing more repeats.</div>`; return; }
-    var best=Object.assign({mealCount:m},cand);
+    mealCount = parseInt(mealCountSel);
   }
-  renderResult(best,params);
-}
 
-function renderResult(plan,params){
-  const out=document.getElementById('result'); let html=`<div class="card"><h3>Generated Day — ${plan.mealCount} meals</h3>`;
-  let grand={cal:0,p:0,c:0,f:0};
-  plan.meals.forEach((meal,idx)=>{
-    let mcal=0,mp=0,mc=0,mf=0;
-    html+=`<h4>Meal ${idx+1}</h4><table><thead><tr><th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
-    meal.items.forEach(it=>{
-      html+=`<tr><td>${it.name}</td><td>${it.kcal}</td><td>${it.p}</td><td>${it.c}</td><td>${it.f}</td></tr>`;
-      mcal+=it.kcal; mp+=it.p; mc+=it.c; mf+=it.f;
-    });
-    html+=`<tr style="font-weight:700"><td>Meal subtotal</td><td>${mcal.toFixed(1)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
-    html+=`</tbody></table>`;
-    grand.cal+=mcal; grand.p+=mp; grand.c+=mc; grand.f+=mf;
+  let plan = [];
+  let totals = {kcal:0,p:0,c:0,f:0};
+  let shakeCount = 0;
+  let foodCount = {};
+
+  while (plan.length < mealCount) {
+    let food = foods[Math.floor(Math.random()*foods.length)];
+
+    if (isShakeOrCreami(food) && shakeCount >= maxShakes) continue;
+    if (foodCount[food.name] >= mealRepeats) continue;
+
+    plan.push(food);
+    totals.kcal += food.kcal;
+    totals.p += food.p;
+    totals.c += food.c;
+    totals.f += food.f;
+
+    if (isShakeOrCreami(food)) shakeCount++;
+    foodCount[food.name] = (foodCount[food.name]||0) + 1;
+  }
+
+  const output = document.getElementById("output");
+  let html = "";
+
+  let idx=1;
+  plan.forEach(food=>{
+    html += `<div class="meal"><table><tr><th>Meal ${idx}</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr>`;
+    html += `<tr><td>${food.name}</td><td>${food.kcal}</td><td>${food.p}</td><td>${food.c}</td><td>${food.f}</td></tr></table></div>`;
+    idx++;
   });
-  html+=`<div style="margin-top:10px"><span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
-         <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
-         <span class="pill">Carbs: <strong>${grand.c.to
+
+  html += `<h3>Day Totals</h3>
+  <table>
+  <tr><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th></tr>
+  <tr><td>${totals.kcal}</td><td>${totals.p}</td><td>${totals.c}</td><td>${totals.f}</td></tr>
+  </table>`;
+
+  output.innerHTML = html;
+}
+</script>
+</body>
+</html>
