@@ -1,0 +1,79 @@
+:root {
+  --bg:#f7fafc;
+  --card:#fff;
+  --muted:#64748b;
+  --accent:#06b6d4;
+}
+
+body {
+  font-family: Inter, system-ui, -apple-system, Arial;
+  margin: 18px;
+  background: var(--bg);
+  color: #0f172a;
+}
+
+h1 {
+  margin: 0 0 8px;
+}
+
+.card {
+  background: var(--card);
+  padding: 14px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(11,20,37,0.06);
+  margin-bottom: 12px;
+}
+
+label {
+  display: inline-block;
+  margin-right: 10px;
+  font-size: 14px;
+}
+
+input[type=number], select {
+  padding: 6px;
+  margin-right: 10px;
+  width: 110px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+th, td {
+  padding: 8px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+}
+
+.pill {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2f7;
+  margin-right: 8px;
+}
+
+.muted { color: var(--muted); }
+.ok { color: green; }
+.warn { color: crimson; }
+.small { font-size: 13px; color: var(--muted); }
+.footer-note { font-size: 13px; color: #334155; margin-top: 8px; }
