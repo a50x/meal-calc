@@ -91,13 +91,18 @@ function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
 function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+// ===========================
+// Portion handling
+// ===========================
 function pickPortion(food){
-  if(!food.portionable) return {...food, qty:1};
+  const isPortionable = food.portionable === true; // default false
+  if(!isPortionable) return {...food, qty:1, kcal: food.cal, name: food.name};
+
   const qty = rand(food.min, food.max);
   return {
     ...food,
     qty,
-    kcal: food.kcal*qty,
+    kcal: food.cal*qty,
     p: food.p*qty,
     c: food.c*qty,
     f: food.f*qty,
@@ -105,6 +110,9 @@ function pickPortion(food){
   };
 }
 
+// ===========================
+// UI & targets
+// ===========================
 function getTargetsFromUI(){
   const calT = Number(document.getElementById('calTarget').value);
   const calR = Number(document.getElementById('calRange').value);
