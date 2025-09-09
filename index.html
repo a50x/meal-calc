@@ -82,7 +82,7 @@
   <div id="result"></div>
 
 <script>
-let FOODS = []; // will be loaded from foods.json
+let FOODS = []; // loaded from foods.json
 
 // ===========================
 // Helpers
@@ -91,11 +91,22 @@ function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
 function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+// Flatten FOODS for easier sampling
+function flattenFoods(obj){
+  let arr=[];
+  for(const cat in obj){
+    for(const name in obj[cat]){
+      arr.push({...obj[cat][name], name, id:name});
+    }
+  }
+  return arr;
+}
+
 // ===========================
 // Portion handling
 // ===========================
 function pickPortion(food){
-  const isPortionable = food.portionable === true; // default false
+  const isPortionable = food.portionable === true;
   if(!isPortionable) return {...food, qty:1, kcal: food.cal, name: food.name};
 
   const qty = rand(food.min, food.max);
@@ -284,7 +295,7 @@ function exportCSV(){
 fetch('foods.json')
   .then(r=>r.json())
   .then(data=>{
-    FOODS=data;
+    FOODS=flattenFoods(data);
     generate();
   })
   .catch(err=>{
