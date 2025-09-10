@@ -44,7 +44,7 @@ function generate() {
     attempts++;
 
     const chosenMeals = [];
-    let total = { kcal: 0, p: 0, c: 0, f: 0 };
+    let total = { cal: 0, p: 0, c: 0, f: 0 };
 
     // Decide number of meals
     let mealsToMake = 0;
@@ -62,14 +62,14 @@ function generate() {
       const food = foods[Math.floor(Math.random() * foods.length)];
 
       // Enforce repeats
-      usedCounts[food.id] = (usedCounts[food.id] || 0) + 1;
-      if (usedCounts[food.id] > maxRepeats) {
+      usedCounts[food.name] = (usedCounts[food.name] || 0) + 1;
+      if (usedCounts[food.name] > maxRepeats) {
         m--;
         continue;
       }
 
       // Enforce shake/creami cap
-      if (food.tags.includes("shake")) {
+      if (food.tags && food.tags.includes("shake")) {
         if (shakesUsed >= maxShakes) {
           m--;
           continue;
@@ -85,7 +85,7 @@ function generate() {
 
       chosenMeals.push({ ...food, portion });
 
-      total.kcal += food.kcal * portion;
+      total.cal += food.cal * portion;
       total.p += food.p * portion;
       total.c += food.c * portion;
       total.f += food.f * portion;
@@ -93,7 +93,7 @@ function generate() {
 
     // Check if within ranges
     if (
-      total.kcal >= minCal && total.kcal <= maxCal &&
+      total.cal >= minCal && total.cal <= maxCal &&
       total.p >= minP && total.p <= maxP &&
       total.c >= minC && total.c <= maxC &&
       total.f >= minF && total.f <= maxF
@@ -124,14 +124,14 @@ function renderPlan(plan) {
       : meal.name;
     html += `<tr>
       <td>${i + 1}. ${name}</td>
-      <td>${(meal.kcal * meal.portion).toFixed(0)}</td>
+      <td>${(meal.cal * meal.portion).toFixed(0)}</td>
       <td>${(meal.p * meal.portion).toFixed(0)}</td>
       <td>${(meal.c * meal.portion).toFixed(0)}</td>
       <td>${(meal.f * meal.portion).toFixed(0)}</td>
     </tr>`;
   });
   html += `<tr style="font-weight:bold"><td>Total</td>
-    <td>${plan.totals.kcal.toFixed(0)}</td>
+    <td>${plan.totals.cal.toFixed(0)}</td>
     <td>${plan.totals.p.toFixed(0)}</td>
     <td>${plan.totals.c.toFixed(0)}</td>
     <td>${plan.totals.f.toFixed(0)}</td>
