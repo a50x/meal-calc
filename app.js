@@ -112,40 +112,45 @@ function isShake(food) {
 // ---------------------------
 // Candidate builder
 // ---------------------------
-function buildCandidate(mealCount, maxShakes, maxRepeats, targets) {
-  const meals = [];
-  const totals = { cal: 0, p: 0, c: 0, f: 0 };
-  const counts = {};
+function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
+  const candidate = [];
   let shakesUsed = 0;
+  const foodCounts = {};
 
-  for (let m = 0; m < mealCount; m++) {
-    const mealItems = [];
-    const targetItems = rand(1, 3);
-    let itemAttempts = 0;
-    while (mealItems.length < targetItems && itemAttempts < 80) {
-      itemAttempts++;
-      const raw = sample(FOODS);
-      if (!raw) break;
+  for (let m = 0; m < mealsWanted; m++) {
+    const meal = [];
+    const numItems = rand(2, 3); // prefer 2–3 items per meal
 
-      const curCount = counts[raw.id] || 0;
-      if (curCount + 1 > maxRepeats) continue;
-      if (isShake(raw) && shakesUsed + 1 > maxShakes) continue;
+    for (let i = 0; i < numItems; i++) {
+      let food;
+      let attempts = 0;
 
-      const chosen = pickPortion(raw);
-      mealItems.push(chosen);
-      counts[raw.id] = (counts[raw.id] || 0) + 1;
-      if (isShake(raw)) shakesUsed++;
+      do {
+        food = foods[rand(0, foods.length - 1)];
+        attempts++;
 
-      totals.cal += Number(chosen.kcal || 0);
-      totals.p += Number(chosen.p || 0);
-      totals.c += Number(chosen.c || 0);
-      totals.f += Number(chosen.f || 0);
+        // enforce shake/creami cap
+        if ((food.shake || food.creami) && shakesUsed >= maxShakes) continue;
+
+        // enforce repeat cap
+        if (foodCounts[food.name] >= maxRepeats) continue;
+
+        break;
+      } while (attempts < 50);
+
+      if (attempts >= 50) continue;
+
+      meal.push(food);
+
+      // update counters
+      if (food.shake || food.creami) shakesUsed++;
+      foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
     }
-    if (mealItems.length === 0) return null;
-    meals.push({ items: mealItems });
+
+    candidate.push(meal);
   }
 
-  return { meals, totals, shakesUsed, counts };
+  return candidate;
 }
 
 // ---------------------------
