@@ -113,24 +113,23 @@ function isShake(food) {
 // Candidate builder
 // ---------------------------
 function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
-  const candidate = [];
+  const candidate = { meals: [], totals: { cal: 0, p: 0, c: 0, f: 0 } };
   let shakesUsed = 0;
   const foodCounts = {};
 
   for (let m = 0; m < mealsWanted; m++) {
-    const meal = [];
-    const numItems = rand(2, 3); // prefer 2–3 items per meal
+    const meal = { items: [] };
+    const numItems = rand(2, 3); // 2–3 foods per meal
 
     for (let i = 0; i < numItems; i++) {
-      let food;
-      let attempts = 0;
+      let food, attempts = 0;
 
       do {
-        food = foods[rand(0, foods.length - 1)];
+        food = pickPortion(sample(foods));
         attempts++;
 
-        // enforce shake/creami cap
-        if ((food.shake || food.creami) && shakesUsed >= maxShakes) continue;
+        // enforce shake cap
+        if (isShake(food) && shakesUsed >= maxShakes) continue;
 
         // enforce repeat cap
         if (foodCounts[food.name] >= maxRepeats) continue;
@@ -140,14 +139,19 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
 
       if (attempts >= 50) continue;
 
-      meal.push(food);
+      meal.items.push(food);
 
       // update counters
-      if (food.shake || food.creami) shakesUsed++;
+      if (isShake(food)) shakesUsed++;
       foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
+
+      candidate.totals.cal += food.kcal;
+      candidate.totals.p += food.p;
+      candidate.totals.c += food.c;
+      candidate.totals.f += food.f;
     }
 
-    candidate.push(meal);
+    candidate.meals.push(meal);
   }
 
   return candidate;
@@ -157,13 +161,11 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
 // Search / optimization
 // ---------------------------
 function scoreTotals(totals, targets, mealCount) {
-  // Aim to spread macros evenly across meals
   const pMid = (targets.pMin + targets.pMax) / 2 / mealCount;
   const cMid = (targets.cMin + targets.cMax) / 2 / mealCount;
   const fMid = (targets.fMin + targets.fMax) / 2 / mealCount;
   const calMid = (targets.calMin + targets.calMax) / 2 / mealCount;
 
-  // Compute per-meal averages
   const pAvg = totals.p / mealCount;
   const cAvg = totals.c / mealCount;
   const fAvg = totals.f / mealCount;
@@ -181,7 +183,7 @@ function findBestForMealCount(mealCount, params, maxTries = 2000) {
   let best = null;
 
   for (let i = 0; i < maxTries; i++) {
-    const c = buildCandidate(mealCount, maxShakes, maxRepeats, params);
+    const c = buildCandidate(mealCount, FOODS, maxShakes, maxRepeats);
     if (!c) continue;
     if (c.totals.cal > params.calMax) continue;
 
