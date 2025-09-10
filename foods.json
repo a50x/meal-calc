@@ -1,380 +1,470 @@
 [
   {
+    "id": "quaker-oatmeal-maple",
     "name": "Quaker Instant Oatmeal – Maple & Brown Sugar (1 packet)",
-    "cal": 160,
+    "kcal": 160,
     "p": 4,
     "c": 33,
-    "f": 2
+    "f": 2,
+    "tags": ["breakfast"]
   },
   {
-    "name": "Plain Bagel with Cream Cheese",
-    "cal": 300,
+    "id": "bagel-creamcheese",
+    "name": "Bagel with cream cheese",
+    "kcal": 290,
     "p": 9,
-    "c": 54,
-    "f": 7
+    "c": 56,
+    "f": 6,
+    "tags": ["breakfast"]
   },
   {
-    "name": "Plain Bagel with Kerrygold Butter",
-    "cal": 310,
+    "id": "plain-bagel-butter",
+    "name": "Plain bagel with Kerrygold butter",
+    "kcal": 310,
     "p": 9,
-    "c": 54,
-    "f": 8
+    "c": 56,
+    "f": 8,
+    "tags": ["breakfast"]
   },
   {
-    "name": "English Muffin with Butter",
-    "cal": 180,
-    "p": 4,
+    "id": "english-muffin-butter",
+    "name": "English muffin with butter",
+    "kcal": 180,
+    "p": 5,
     "c": 29,
-    "f": 5
+    "f": 4,
+    "tags": ["breakfast"]
   },
   {
-    "name": "Honey Bunches of Oats + Whole Milk (1 serving)",
-    "cal": 250,
-    "p": 6,
-    "c": 46,
-    "f": 5
-  },
-  {
-    "name": "Cheerios + Whole Milk (1 serving)",
-    "cal": 220,
-    "p": 7,
-    "c": 38,
-    "f": 4
-  },
-  {
-    "name": "Rice Krispies + Whole Milk (1 serving)",
-    "cal": 210,
-    "p": 6,
-    "c": 39,
-    "f": 3
-  },
-  {
-    "name": "Cinnamon Protein Cheerios + Horizon Whole Milk",
-    "cal": 300,
-    "p": 16,
-    "c": 36,
-    "f": 10.5
-  },
-  {
-    "name": "Cookies & Crème Protein Cheerios + Horizon Whole Milk",
-    "cal": 300,
-    "p": 16,
-    "c": 36,
-    "f": 10.5
-  },
-  {
-    "name": "Vanilla Yogurt + Granola",
-    "cal": 250,
+    "id": "cereal-honeybunchesofoats",
+    "name": "Honey Bunches of Oats (1 bowl + Horizon milk)",
+    "kcal": 280,
     "p": 8,
-    "c": 42,
-    "f": 6
+    "c": 48,
+    "f": 6,
+    "tags": ["cereal"]
   },
   {
-    "name": "Oui Vanilla Yogurt (jar)",
-    "cal": 180,
+    "id": "cereal-honeybunchesofoats-fairlife",
+    "name": "Honey Bunches of Oats (1 bowl + Fairlife milk)",
+    "kcal": 280,
+    "p": 12,
+    "c": 46,
+    "f": 6,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cereal-cheerios",
+    "name": "Cheerios (1 bowl + Horizon milk)",
+    "kcal": 270,
+    "p": 8,
+    "c": 45,
+    "f": 6,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cereal-cheerios-fairlife",
+    "name": "Cheerios (1 bowl + Fairlife milk)",
+    "kcal": 270,
+    "p": 12,
+    "c": 43,
+    "f": 6,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cereal-ricekrispies",
+    "name": "Rice Krispies (1 bowl + Horizon milk)",
+    "kcal": 250,
+    "p": 7,
+    "c": 47,
+    "f": 5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cereal-ricekrispies-fairlife",
+    "name": "Rice Krispies (1 bowl + Fairlife milk)",
+    "kcal": 250,
+    "p": 11,
+    "c": 45,
+    "f": 5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cinnamon-protein-cheerios-horizon",
+    "name": "Cinnamon Protein Cheerios + Horizon Whole Milk",
+    "kcal": 300,
+    "p": 16,
+    "c": 36,
+    "f": 10.5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cinnamon-protein-cheerios-fairlife",
+    "name": "Cinnamon Protein Cheerios + Fairlife Whole Milk",
+    "kcal": 300,
+    "p": 20,
+    "c": 34,
+    "f": 10.5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cookiesncream-protein-cheerios-horizon",
+    "name": "Cookies & Crème Protein Cheerios + Horizon Whole Milk",
+    "kcal": 300,
+    "p": 16,
+    "c": 36,
+    "f": 10.5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "cookiesncream-protein-cheerios-fairlife",
+    "name": "Cookies & Crème Protein Cheerios + Fairlife Whole Milk",
+    "kcal": 300,
+    "p": 20,
+    "c": 34,
+    "f": 10.5,
+    "tags": ["cereal"]
+  },
+  {
+    "id": "yogurt-vanilla-granola",
+    "name": "Vanilla yogurt + granola",
+    "kcal": 260,
+    "p": 9,
+    "c": 40,
+    "f": 7,
+    "tags": ["snack"]
+  },
+  {
+    "id": "yogurt-oui-vanilla",
+    "name": "Oui vanilla yogurt (jar)",
+    "kcal": 180,
     "p": 5,
     "c": 20,
-    "f": 8
+    "f": 8,
+    "tags": ["snack"]
   },
   {
+    "id": "carnation-breakfast-hp",
     "name": "Carnation Breakfast Essentials High Protein – Milk Chocolate",
-    "cal": 220,
+    "kcal": 220,
     "p": 17,
     "c": 30,
-    "f": 4
+    "f": 4,
+    "tags": ["shake"]
   },
   {
+    "id": "ghost-protein-horizon",
     "name": "Ghost Protein Powder + Horizon Whole Milk (Cinnabon flavor)",
-    "cal": 240,
+    "kcal": 240,
     "p": 27,
     "c": 14,
-    "f": 7
+    "f": 7,
+    "tags": ["shake"]
   },
   {
-    "name": "Ghost Protein Powder + Fairlife Whole Milk",
-    "cal": 240,
-    "p": 33,
+    "id": "ghost-protein-fairlife",
+    "name": "Ghost Protein Powder + Fairlife Whole Milk (Cinnabon flavor)",
+    "kcal": 240,
+    "p": 31,
     "c": 12,
-    "f": 7
+    "f": 7,
+    "tags": ["shake"]
   },
   {
-    "name": "Pancakes with Maple Syrup (2 medium)",
-    "cal": 350,
+    "id": "pancakes-maple",
+    "name": "Pancakes (with maple syrup)",
+    "kcal": 350,
     "p": 8,
-    "c": 62,
-    "f": 8
+    "c": 65,
+    "f": 8,
+    "tags": ["breakfast"]
   },
   {
-    "name": "Waffles with Maple Syrup (2)",
-    "cal": 320,
+    "id": "waffles-maple",
+    "name": "Waffles (with maple syrup)",
+    "kcal": 330,
     "p": 7,
-    "c": 58,
-    "f": 7
+    "c": 60,
+    "f": 8,
+    "tags": ["breakfast"]
   },
   {
-    "name": "Chicken Tenders with Ketchup (4 tenders)",
-    "cal": 280,
-    "p": 20,
-    "c": 18,
-    "f": 14
+    "id": "chicken-tenders",
+    "name": "Chicken tenders (with ketchup, air fryer)",
+    "kcal": 320,
+    "p": 28,
+    "c": 22,
+    "f": 12,
+    "tags": ["protein"]
   },
   {
+    "id": "impossible-nuggets",
     "name": "Impossible Chicken Nuggets (5pc)",
-    "cal": 240,
+    "kcal": 240,
     "p": 13,
     "c": 19,
-    "f": 12
+    "f": 12,
+    "tags": ["protein"]
   },
   {
-    "name": "Fish Sticks with Ketchup (5 sticks)",
-    "cal": 220,
+    "id": "fish-sticks",
+    "name": "Fish sticks (with ketchup)",
+    "kcal": 250,
     "p": 12,
     "c": 20,
-    "f": 11
+    "f": 13,
+    "tags": ["protein"]
   },
   {
-    "name": "Cheeseburger on Brioche Bun with Ketchup",
-    "cal": 450,
+    "id": "hamburger",
+    "name": "Hamburger (brioche bun, ketchup)",
+    "kcal": 450,
     "p": 25,
-    "c": 35,
-    "f": 22
+    "c": 38,
+    "f": 20,
+    "tags": ["protein"]
   },
   {
-    "name": "Beef Slider / Mini Cheeseburger with Ketchup",
-    "cal": 280,
-    "p": 16,
-    "c": 18,
-    "f": 14
-  },
-  {
-    "name": "Hot Dog with Bun and Ketchup",
-    "cal": 300,
-    "p": 12,
+    "id": "hotdog",
+    "name": "Hot dog (bun + ketchup)",
+    "kcal": 300,
+    "p": 11,
     "c": 28,
-    "f": 16
+    "f": 15,
+    "tags": ["protein"]
   },
   {
-    "name": "Hot Pocket – 4 Cheese Pizza",
-    "cal": 320,
-    "p": 10,
-    "c": 39,
-    "f": 13
-  },
-  {
-    "name": "Hot Pocket – Pepperoni Pizza",
-    "cal": 320,
-    "p": 12,
-    "c": 38,
-    "f": 13
-  },
-  {
+    "id": "tonys-pizza",
     "name": "Tony’s Pizza (¼ pizza)",
-    "cal": 330,
+    "kcal": 330,
     "p": 12,
     "c": 38,
-    "f": 14
+    "f": 14,
+    "tags": ["main"]
   },
   {
-    "name": "Microwaveable White Rice with Butter and Salt",
-    "cal": 250,
-    "p": 4,
-    "c": 52,
-    "f": 5
-  },
-  {
-    "name": "Kraft Mac & Cheese (1 cup prepared)",
-    "cal": 350,
-    "p": 12,
-    "c": 48,
-    "f": 14
-  },
-  {
-    "name": "Annie’s Super! Mac Shells & White Cheddar",
-    "cal": 280,
-    "p": 15,
-    "c": 45,
-    "f": 4.5
-  },
-  {
-    "name": "Barilla Protein+® Rigatoni with Marinara (2 oz dry)",
-    "cal": 190,
-    "p": 17,
-    "c": 35,
-    "f": 2
-  },
-  {
-    "name": "French Fries with Ketchup (air-fried, 1 serving)",
-    "cal": 300,
+    "id": "rice-butter",
+    "name": "Microwave Jasmine Rice + Kerrygold Butter + Salt",
+    "kcal": 250,
     "p": 5,
     "c": 45,
-    "f": 12
+    "f": 7,
+    "tags": ["carb"]
   },
   {
-    "name": "Tater Tots with Ketchup (air-fried, 1 serving)",
-    "cal": 320,
+    "id": "annies-mac",
+    "name": "Annie’s Super! Mac Shells & White Cheddar",
+    "kcal": 280,
+    "p": 15,
+    "c": 45,
+    "f": 4.5,
+    "tags": ["carb"]
+  },
+  {
+    "id": "barilla-protein-pasta",
+    "name": "Barilla Protein+ Rigatoni with marinara",
+    "kcal": 190,
+    "p": 17,
+    "c": 35,
+    "f": 2,
+    "tags": ["carb"]
+  },
+  {
+    "id": "french-fries",
+    "name": "French fries (air fryer + ketchup)",
+    "kcal": 300,
     "p": 4,
-    "c": 46,
-    "f": 14
+    "c": 45,
+    "f": 12,
+    "tags": ["carb"]
   },
   {
-    "name": "Corn with Butter & Garlic (1 cup)",
-    "cal": 180,
+    "id": "tater-tots",
+    "name": "Tater tots (air fryer + ketchup)",
+    "kcal": 280,
     "p": 4,
-    "c": 28,
-    "f": 7
+    "c": 40,
+    "f": 12,
+    "tags": ["carb"]
   },
   {
-    "name": "Apple Slices (1 medium apple)",
-    "cal": 95,
+    "id": "corn-butter",
+    "name": "Corn with butter & garlic",
+    "kcal": 180,
+    "p": 4,
+    "c": 30,
+    "f": 7,
+    "tags": ["carb"]
+  },
+  {
+    "id": "fruit-apple",
+    "name": "Apple slices",
+    "kcal": 80,
     "p": 0,
-    "c": 25,
-    "f": 0
+    "c": 22,
+    "f": 0,
+    "tags": ["fruit"]
   },
   {
-    "name": "Banana (1 medium)",
-    "cal": 105,
+    "id": "fruit-banana",
+    "name": "Banana",
+    "kcal": 105,
     "p": 1,
     "c": 27,
-    "f": 0
+    "f": 0,
+    "tags": ["fruit"]
   },
   {
-    "name": "Grapes (1 cup)",
-    "cal": 100,
-    "p": 1,
-    "c": 27,
-    "f": 0
+    "id": "fruit-grapes",
+    "name": "Grapes",
+    "kcal": 60,
+    "p": 0,
+    "c": 16,
+    "f": 0,
+    "tags": ["fruit"]
   },
   {
-    "name": "Strawberries (1 cup)",
-    "cal": 50,
+    "id": "fruit-strawberries",
+    "name": "Strawberries",
+    "kcal": 50,
     "p": 1,
     "c": 12,
-    "f": 0
+    "f": 0,
+    "tags": ["fruit"]
   },
   {
-    "name": "Cantaloupe (1 cup)",
-    "cal": 55,
-    "p": 1,
-    "c": 13,
-    "f": 0
-  },
-  {
+    "id": "fruit-watermelon",
     "name": "Watermelon (1 cup)",
-    "cal": 45,
+    "kcal": 45,
     "p": 1,
     "c": 11,
-    "f": 0
+    "f": 0,
+    "tags": ["fruit"]
   },
   {
-    "name": "Graham Crackers (2 sheets)",
-    "cal": 130,
+    "id": "snack-graham",
+    "name": "Graham crackers",
+    "kcal": 130,
     "p": 2,
-    "c": 25,
-    "f": 3
-  },
-  {
-    "name": "Rice Krispy Treat",
-    "cal": 100,
-    "p": 1,
-    "c": 22,
-    "f": 1
-  },
-  {
-    "name": "Microwave Popcorn (light, 3 cups popped)",
-    "cal": 120,
-    "p": 3,
     "c": 24,
-    "f": 2
+    "f": 3,
+    "tags": ["snack"]
   },
   {
+    "id": "snack-ricekrispy-treat",
+    "name": "Rice Krispy Treat",
+    "kcal": 90,
+    "p": 1,
+    "c": 17,
+    "f": 2,
+    "tags": ["snack"]
+  },
+  {
+    "id": "snack-popcorn",
+    "name": "Microwave popcorn (light)",
+    "kcal": 100,
+    "p": 3,
+    "c": 20,
+    "f": 2,
+    "tags": ["snack"]
+  },
+  {
+    "id": "snack-chocolate-milk",
     "name": "Chocolate Milk (1 cup)",
-    "cal": 200,
+    "kcal": 200,
     "p": 8,
     "c": 26,
-    "f": 8
+    "f": 8,
+    "tags": ["snack", "shake"]
   },
   {
-    "name": "Pudding Cup",
-    "cal": 120,
+    "id": "snack-pudding",
+    "name": "Pudding cup",
+    "kcal": 150,
     "p": 2,
-    "c": 22,
-    "f": 3
+    "c": 25,
+    "f": 4,
+    "tags": ["snack"]
   },
   {
+    "id": "clif-bar",
     "name": "Clif Chocolate Bar",
-    "cal": 250,
+    "kcal": 250,
     "p": 10,
-    "c": 44,
-    "f": 6
+    "c": 40,
+    "f": 6,
+    "tags": ["snack"]
   },
   {
+    "id": "fitcrunch-bar",
     "name": "FitCrunch Bar",
-    "cal": 190,
-    "p": 16,
-    "c": 15,
-    "f": 8
+    "kcal": 380,
+    "p": 30,
+    "c": 27,
+    "f": 16,
+    "tags": ["snack", "protein"]
   },
   {
+    "id": "chobani-flip-smores",
     "name": "Chobani Flip – S’mores",
-    "cal": 160,
+    "kcal": 160,
     "p": 9,
     "c": 21,
-    "f": 4
+    "f": 4,
+    "tags": ["snack", "treat"]
   },
   {
+    "id": "chobani-flip-cookies",
     "name": "Chobani Flip – Cookies & Cream",
-    "cal": 160,
+    "kcal": 160,
     "p": 9,
     "c": 21,
-    "f": 4.5
+    "f": 4.5,
+    "tags": ["snack", "treat"]
   },
   {
-    "name": "Chobani Flip – Birthday Cake",
-    "cal": 160,
-    "p": 9,
-    "c": 21,
-    "f": 4.5
-  },
-  {
-    "name": "Chobani Flip – Cookie Dough",
-    "cal": 160,
-    "p": 9,
-    "c": 21,
-    "f": 4.5
-  },
-  {
-    "name": "Vanilla Protein Creami Base",
-    "cal": 210,
+    "id": "creami-vanilla",
+    "name": "Vanilla Protein Creami",
+    "kcal": 210,
     "p": 38,
     "c": 10,
-    "f": 2
+    "f": 2,
+    "tags": ["shake"]
   },
   {
-    "name": "Cookies & Cream Protein Ice Cream",
-    "cal": 170,
+    "id": "creami-cookies",
+    "name": "Cookies & Cream Protein Creami",
+    "kcal": 170,
     "p": 26,
     "c": 6,
-    "f": 3
+    "f": 3,
+    "tags": ["shake"]
   },
   {
+    "id": "creami-brownie",
     "name": "Brownie Batter Protein Creami",
-    "cal": 220,
+    "kcal": 220,
     "p": 35,
     "c": 13,
-    "f": 3
+    "f": 3,
+    "tags": ["shake"]
   },
   {
-    "name": "Birthday Cake / Vanilla Cookie Dough Protein Creami",
-    "cal": 200,
+    "id": "creami-birthday",
+    "name": "Birthday Cake / Cookie Dough Protein Creami",
+    "kcal": 200,
     "p": 36,
     "c": 9,
-    "f": 2
+    "f": 2,
+    "tags": ["shake"]
   },
   {
+    "id": "creami-brownie-sundae",
     "name": "Brownie Sundae Remix Protein Creami",
-    "cal": 330,
+    "kcal": 330,
     "p": 42,
     "c": 28,
-    "f": 6
+    "f": 6,
+    "tags": ["shake"]
   }
 ]
