@@ -6,7 +6,7 @@
     "p": 4,
     "c": 33,
     "f": 2,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "bagel-creamcheese",
@@ -15,7 +15,7 @@
     "p": 9,
     "c": 56,
     "f": 6,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "lunch"]
   },
   {
     "id": "plain-bagel-butter",
@@ -24,7 +24,7 @@
     "p": 9,
     "c": 56,
     "f": 8,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "lunch"]
   },
   {
     "id": "english-muffin-butter",
@@ -33,7 +33,7 @@
     "p": 5,
     "c": 29,
     "f": 4,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "lunch"]
   },
   {
     "id": "cereal-honeybunchesofoats",
@@ -42,7 +42,7 @@
     "p": 8,
     "c": 48,
     "f": 6,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cereal-honeybunchesofoats-fairlife",
@@ -51,7 +51,7 @@
     "p": 12,
     "c": 46,
     "f": 6,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cereal-cheerios",
@@ -60,7 +60,7 @@
     "p": 8,
     "c": 45,
     "f": 6,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cereal-cheerios-fairlife",
@@ -69,7 +69,7 @@
     "p": 12,
     "c": 43,
     "f": 6,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cereal-ricekrispies",
@@ -78,7 +78,7 @@
     "p": 7,
     "c": 47,
     "f": 5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cereal-ricekrispies-fairlife",
@@ -87,7 +87,7 @@
     "p": 11,
     "c": 45,
     "f": 5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cinnamon-protein-cheerios-horizon",
@@ -96,7 +96,7 @@
     "p": 16,
     "c": 36,
     "f": 10.5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cinnamon-protein-cheerios-fairlife",
@@ -105,7 +105,7 @@
     "p": 20,
     "c": 34,
     "f": 10.5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cookiesncream-protein-cheerios-horizon",
@@ -114,7 +114,7 @@
     "p": 16,
     "c": 36,
     "f": 10.5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "cookiesncream-protein-cheerios-fairlife",
@@ -123,7 +123,7 @@
     "p": 20,
     "c": 34,
     "f": 10.5,
-    "tags": ["cereal"]
+    "tags": ["breakfast", "snack"]
   },
   {
     "id": "yogurt-vanilla-granola",
@@ -132,7 +132,7 @@
     "p": 9,
     "c": 40,
     "f": 7,
-    "tags": ["snack"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "yogurt-oui-vanilla",
@@ -141,16 +141,34 @@
     "p": 5,
     "c": 20,
     "f": 8,
-    "tags": ["snack"]
+    "tags": ["snack", "breakfast"]
   },
   {
-    "id": "carnation-breakfast-hp",
-    "name": "Carnation Breakfast Essentials High Protein – Milk Chocolate",
+    "id": "carnation-rtd-hp",
+    "name": "Carnation Ready-to-Drink High Protein – Rich Milk Chocolate",
     "kcal": 220,
-    "p": 17,
-    "c": 30,
-    "f": 4,
-    "tags": ["shake"]
+    "p": 15,
+    "c": 27,
+    "f": 6,
+    "tags": ["shake", "breakfast", "snack"]
+  },
+  {
+    "id": "carnation-powder-horizon",
+    "name": "Carnation High-Protein Powder (prepared with Horizon Whole Milk, 1 cup)",
+    "kcal": 300,
+    "p": 18,
+    "c": 22,
+    "f": 8,
+    "tags": ["shake", "breakfast", "snack"]
+  },
+  {
+    "id": "carnation-powder-fairlife",
+    "name": "Carnation High-Protein Powder (prepared with Fairlife Whole Ultra-Filtered, 1 cup)",
+    "kcal": 290,
+    "p": 23,
+    "c": 15,
+    "f": 8,
+    "tags": ["shake", "breakfast", "snack"]
   },
   {
     "id": "ghost-protein-horizon",
@@ -159,7 +177,7 @@
     "p": 27,
     "c": 14,
     "f": 7,
-    "tags": ["shake"]
+    "tags": ["shake", "breakfast", "snack"]
   },
   {
     "id": "ghost-protein-fairlife",
@@ -168,7 +186,7 @@
     "p": 31,
     "c": 12,
     "f": 7,
-    "tags": ["shake"]
+    "tags": ["shake", "breakfast", "snack"]
   },
   {
     "id": "pancakes-maple",
@@ -177,7 +195,7 @@
     "p": 8,
     "c": 65,
     "f": 8,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "lunch", "snack"]
   },
   {
     "id": "waffles-maple",
@@ -186,7 +204,7 @@
     "p": 7,
     "c": 60,
     "f": 8,
-    "tags": ["breakfast"]
+    "tags": ["breakfast", "lunch", "snack"]
   },
   {
     "id": "chicken-tenders",
@@ -195,7 +213,7 @@
     "p": 28,
     "c": 22,
     "f": 12,
-    "tags": ["protein"]
+    "tags": ["lunch", "dinner", "protein"]
   },
   {
     "id": "impossible-nuggets",
@@ -204,7 +222,7 @@
     "p": 13,
     "c": 19,
     "f": 12,
-    "tags": ["protein"]
+    "tags": ["lunch", "dinner", "protein"]
   },
   {
     "id": "fish-sticks",
@@ -213,7 +231,7 @@
     "p": 12,
     "c": 20,
     "f": 13,
-    "tags": ["protein"]
+    "tags": ["lunch", "dinner", "protein"]
   },
   {
     "id": "hamburger",
@@ -222,7 +240,7 @@
     "p": 25,
     "c": 38,
     "f": 20,
-    "tags": ["protein"]
+    "tags": ["lunch", "dinner", "protein"]
   },
   {
     "id": "hotdog",
@@ -231,7 +249,7 @@
     "p": 11,
     "c": 28,
     "f": 15,
-    "tags": ["protein"]
+    "tags": ["lunch", "dinner", "protein"]
   },
   {
     "id": "tonys-pizza",
@@ -240,7 +258,7 @@
     "p": 12,
     "c": 38,
     "f": 14,
-    "tags": ["main"]
+    "tags": ["lunch", "dinner", "main"]
   },
   {
     "id": "rice-butter",
@@ -249,7 +267,7 @@
     "p": 5,
     "c": 45,
     "f": 7,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb"]
   },
   {
     "id": "annies-mac",
@@ -258,7 +276,7 @@
     "p": 15,
     "c": 45,
     "f": 4.5,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb"]
   },
   {
     "id": "barilla-protein-pasta",
@@ -267,7 +285,7 @@
     "p": 17,
     "c": 35,
     "f": 2,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb"]
   },
   {
     "id": "french-fries",
@@ -276,7 +294,7 @@
     "p": 4,
     "c": 45,
     "f": 12,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb", "snack"]
   },
   {
     "id": "tater-tots",
@@ -285,7 +303,7 @@
     "p": 4,
     "c": 40,
     "f": 12,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb", "snack"]
   },
   {
     "id": "corn-butter",
@@ -294,7 +312,7 @@
     "p": 4,
     "c": 30,
     "f": 7,
-    "tags": ["carb"]
+    "tags": ["lunch", "dinner", "carb", "snack"]
   },
   {
     "id": "fruit-apple",
@@ -303,7 +321,7 @@
     "p": 0,
     "c": 22,
     "f": 0,
-    "tags": ["fruit"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "fruit-banana",
@@ -312,7 +330,7 @@
     "p": 1,
     "c": 27,
     "f": 0,
-    "tags": ["fruit"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "fruit-grapes",
@@ -321,7 +339,7 @@
     "p": 0,
     "c": 16,
     "f": 0,
-    "tags": ["fruit"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "fruit-strawberries",
@@ -330,7 +348,7 @@
     "p": 1,
     "c": 12,
     "f": 0,
-    "tags": ["fruit"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "fruit-watermelon",
@@ -339,7 +357,7 @@
     "p": 1,
     "c": 11,
     "f": 0,
-    "tags": ["fruit"]
+    "tags": ["snack", "breakfast"]
   },
   {
     "id": "snack-graham",
@@ -429,7 +447,7 @@
     "p": 38,
     "c": 10,
     "f": 2,
-    "tags": ["shake"]
+    "tags": ["shake", "snack"]
   },
   {
     "id": "creami-cookies",
@@ -438,7 +456,7 @@
     "p": 26,
     "c": 6,
     "f": 3,
-    "tags": ["shake"]
+    "tags": ["shake", "snack"]
   },
   {
     "id": "creami-brownie",
@@ -447,7 +465,7 @@
     "p": 35,
     "c": 13,
     "f": 3,
-    "tags": ["shake"]
+    "tags": ["shake", "snack"]
   },
   {
     "id": "creami-birthday",
@@ -456,7 +474,7 @@
     "p": 36,
     "c": 9,
     "f": 2,
-    "tags": ["shake"]
+    "tags": ["shake", "snack"]
   },
   {
     "id": "creami-brownie-sundae",
@@ -465,6 +483,6 @@
     "p": 42,
     "c": 28,
     "f": 6,
-    "tags": ["shake"]
+    "tags": ["shake", "snack"]
   }
 ]
