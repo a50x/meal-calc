@@ -125,8 +125,8 @@
     "portion_scalable": 0.5
   },
   {
-    "id": "cinnamon-protein-cheerios-horizon",
-    "name": "Cinnamon Protein Cheerios + Horizon Whole Milk",
+    "id": "protein-cheerios-horizon",
+    "name": "Cinnamon/Cookies & Crème Protein Cheerios + Horizon Whole Milk",
     "kcal": 300,
     "p": 16,
     "c": 36,
@@ -134,26 +134,8 @@
     "tags": ["breakfast", "snack"]
   },
   {
-    "id": "cinnamon-protein-cheerios-fairlife",
-    "name": "Cinnamon Protein Cheerios + Fairlife Whole Milk",
-    "kcal": 300,
-    "p": 20,
-    "c": 34,
-    "f": 10.5,
-    "tags": ["breakfast", "snack"]
-  },
-  {
-    "id": "cookiesncream-protein-cheerios-horizon",
-    "name": "Cookies & Crème Protein Cheerios + Horizon Whole Milk",
-    "kcal": 300,
-    "p": 16,
-    "c": 36,
-    "f": 10.5,
-    "tags": ["breakfast", "snack"]
-  },
-  {
-    "id": "cookiesncream-protein-cheerios-fairlife",
-    "name": "Cookies & Crème Protein Cheerios + Fairlife Whole Milk",
+    "id": "protein-cheerios-fairlife",
+    "name": "Cinnamon/Cookies & Crème Protein Cheerios + Fairlife Whole Milk",
     "kcal": 300,
     "p": 20,
     "c": 34,
