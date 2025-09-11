@@ -1,9 +1,4 @@
-// app.js — Safe Foods Meal Generator (updated with daily-first + tag-aware + even distribution)
-// - Multiple foods per meal (1..3 items per meal)
-// - Robust foods.json loader (handles arrays, category maps, name->object maps)
-// - Portionable support, fallback property names (cal / kcal), automatic id slugging
-// - Max shakes/repeats are per full day
-// - "Optimal" = 3–5 meals chosen dynamically, avoids empty meals
+// app.js — Safe Foods Meal Generator (updated with per-meal balanced macros + tag-aware + even distribution)
 
 let FOODS = []; // normalized food list (objects with id,name,kcal,p,c,f,tags,portionable,min,max,unit)
 
@@ -20,6 +15,7 @@ function slugify(str) {
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function sumBy(arr, key) { return arr.reduce((s, i) => s + (i[key] || 0), 0); }
+function isShake(food) { return Array.isArray(food.tags) && food.tags.includes('shake'); }
 
 // ---------------------------
 // Load + normalize foods.json
@@ -99,10 +95,6 @@ function pickPortion(food) {
   };
 }
 
-function isShake(food) {
-  return Array.isArray(food.tags) && food.tags.includes('shake');
-}
-
 // ---------------------------
 // Meal tag ordering
 // ---------------------------
@@ -127,25 +119,36 @@ function foodsForMealIndex(mealIndex, totalMeals) {
 }
 
 // ---------------------------
-// Build daily candidate
+// Build daily candidate with per-meal macro target
 // ---------------------------
-function buildDailyCandidate(targets, maxShakes, maxRepeats) {
+function buildDailyCandidate(targets, mealCount, maxShakes, maxRepeats) {
   const candidateFoods = [];
   const foodCounts = {};
   let shakesUsed = 0;
   let totals = { cal: 0, p: 0, c: 0, f: 0 };
 
+  // per-meal target
+  const perMealTarget = {
+    cal: (targets.calMax + targets.calMin) / 2 / mealCount,
+    p: (targets.pMax + targets.pMin) / 2 / mealCount,
+    c: (targets.cMax + targets.cMin) / 2 / mealCount,
+    f: (targets.fMax + targets.fMin) / 2 / mealCount
+  };
+
   let attempts = 0;
-  while ((totals.c < targets.cMax || totals.f < targets.fMax || totals.cal < targets.calMax) && attempts < 10000) {
+  while (attempts < 10000) {
     attempts++;
     const food = pickPortion(sample(FOODS));
+    const remainingMeals = mealCount - Math.floor(totals.cal / perMealTarget.cal);
 
+    // enforce repeats and shake limits
     if (foodCounts[food.name] >= maxRepeats) continue;
     if (isShake(food) && shakesUsed >= maxShakes) continue;
 
-    if (totals.c + food.c > targets.cMax) continue;
-    if (totals.f + food.f > targets.fMax) continue;
-    if (totals.cal + food.kcal > targets.calMax) continue;
+    // soft per-meal macro constraints
+    if (food.c > perMealTarget.c * 1.2) continue;
+    if (food.f > perMealTarget.f * 1.2) continue;
+    if (food.kcal > perMealTarget.cal * 1.2) continue;
 
     candidateFoods.push(food);
     totals.cal += food.kcal;
@@ -155,19 +158,23 @@ function buildDailyCandidate(targets, maxShakes, maxRepeats) {
 
     if (isShake(food)) shakesUsed++;
     foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
+
+    // break early if daily targets exceeded
+    if (totals.cal >= targets.calMax && totals.p >= targets.pMin &&
+        totals.c >= targets.cMin && totals.f >= targets.fMin) break;
   }
 
   return { foods: candidateFoods, totals };
 }
 
 // ---------------------------
-// Distribute foods into meals evenly and by tag
+// Distribute foods evenly + tag-aware
 // ---------------------------
 function distributeMeals(candidateFoods, mealCount) {
   const meals = Array.from({ length: mealCount }, () => ({ items: [] }));
   const leftovers = [];
 
-  // First pass: tag-based placement
+  // first: tag-based placement
   for (const food of candidateFoods) {
     let placed = false;
     for (let i = 0; i < mealCount; i++) {
@@ -181,7 +188,7 @@ function distributeMeals(candidateFoods, mealCount) {
     if (!placed) leftovers.push(food);
   }
 
-  // Second pass: evenly distribute leftovers
+  // evenly distribute remaining
   let mealIdx = 0;
   for (const food of leftovers) {
     meals[mealIdx].items.push(food);
@@ -192,7 +199,8 @@ function distributeMeals(candidateFoods, mealCount) {
 }
 
 // ---------------------------
-// Score totals (optional)
+// Score totals
+// ---------------------------
 function scoreTotals(totals, targets, mealCount) {
   const pMid = (targets.pMin + targets.pMax) / 2 / mealCount;
   const cMid = (targets.cMin + targets.cMax) / 2 / mealCount;
@@ -212,13 +220,14 @@ function scoreTotals(totals, targets, mealCount) {
 
 // ---------------------------
 // Find best candidate
+// ---------------------------
 function findBestCandidate(mealCount, targets, maxTries = 2000) {
   const maxShakes = Number(document.getElementById('maxShakes').value || 0);
   const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
   let best = null;
 
   for (let i = 0; i < maxTries; i++) {
-    const daily = buildDailyCandidate(targets, maxShakes, maxRepeats);
+    const daily = buildDailyCandidate(targets, mealCount, maxShakes, maxRepeats);
     if (!daily || !daily.foods.length) continue;
     const meals = distributeMeals(daily.foods, mealCount);
 
@@ -284,75 +293,4 @@ function generate() {
 
   candidates.sort((a, b) => a.score - b.score);
   renderResult(candidates[0], targets);
-}
-
-// ---------------------------
-// Render + CSV export
-// ---------------------------
-function renderResult(plan, params) {
-  const out = document.getElementById('result');
-  let html = `<div class="card"><h3>Generated Day — ${plan.mealCount} meals</h3>`;
-  let grand = { cal: 0, p: 0, c: 0, f: 0 };
-
-  plan.meals.forEach((meal, idx) => {
-    let mcal = 0, mp = 0, mc = 0, mf = 0;
-    html += `<h4>Meal ${idx + 1}</h4><table><thead><tr><th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
-    meal.items.forEach(it => {
-      const label = it.label || it.name;
-      html += `<tr><td>${label}</td><td>${(it.kcal || 0).toFixed(0)}</td><td>${(it.p || 0).toFixed(1)}</td><td>${(it.c || 0).toFixed(1)}</td><td>${(it.f || 0).toFixed(1)}</td></tr>`;
-      mcal += it.kcal || 0; mp += it.p || 0; mc += it.c || 0; mf += it.f || 0;
-    });
-    html += `<tr style="font-weight:700"><td>Meal subtotal</td><td>${mcal.toFixed(0)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
-    html += `</tbody></table>`;
-    grand.cal += mcal; grand.p += mp; grand.c += mc; grand.f += mf;
-  });
-
-  html += `<div style="margin-top:10px">
-             <span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
-             <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
-             <span class="pill">Carbs: <strong>${grand.c.toFixed(1)} g</strong></span>
-             <span class="pill">Fat: <strong>${grand.f.toFixed(1)} g</strong></span>
-           </div>`;
-  out.innerHTML = html;
-
-  window._lastPlan = { plan, totals: grand };
-}
-
-function exportCSV() {
-  if (!window._lastPlan) { 
-    alert('Generate a plan first'); 
-    return; 
-  }
-
-  const rows = [['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
-  window._lastPlan.plan.meals.forEach((meal, mi) => {
-    meal.items.forEach(it => {
-      rows.push([
-        `Meal ${mi + 1}`, 
-        it.label || it.name, 
-        it.qty || 1, 
-        (it.kcal || 0).toFixed(0), 
-        (it.p || 0).toFixed(1), 
-        (it.c || 0).toFixed(1), 
-        (it.f || 0).toFixed(1)
-      ]);
-    });
-  });
-
-  rows.push([
-    'TOTAL','', '', 
-    window._lastPlan.totals.cal.toFixed(0), 
-    window._lastPlan.totals.p.toFixed(1), 
-    window._lastPlan.totals.c.toFixed(1), 
-    window._lastPlan.totals.f.toFixed(1)
-  ]);
-
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); 
-  a.href = url; 
-  a.download = 'mealplan.csv'; 
-  a.click();
-  URL.revokeObjectURL(url);
 }
