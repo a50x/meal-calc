@@ -10,7 +10,26 @@
     "portion_scalable": 1
   },
   {
-    "id": "hot-pocket-4-chees",
+    "id": "carnation-rtd-rich-chocolate",
+    "name": "Carnation Breakfast Essentials RTD – Rich Milk Chocolate (8 fl oz)",
+    "kcal": 220,
+    "p": 15,
+    "c": 27,
+    "f": 6,
+    "tags": ["breakfast", "snack"]
+  },
+  {
+    "id": "carnation-powder-fairlife-rich-chocolate",
+    "name": "Carnation Breakfast Essentials Powder + Fairlife – Rich Milk Chocolate (8 fl oz)",
+    "kcal": 290,
+    "p": 23,
+    "c": 15,
+    "f": 8,
+    "tags": ["breakfast", "snack", "high-protein"]
+    "portion_scalable": 1
+  },
+  {
+    "id": "hot-pocket-4-cheese",
     "name": "Hot Pocket – 4 Cheese",
     "kcal": 300,
     "p": 12,
@@ -276,7 +295,7 @@
     "p": 12,
     "c": 38,
     "f": 14,
-    "tags": ["lunch", "dinner", "main"],
+    "tags": ["lunch", "dinner"],
     "portion_scalable": 1
   },
   {
