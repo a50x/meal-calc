@@ -150,48 +150,82 @@ function pickPortion(food){
 
 // ---------------------------
 // Meal tag ordering helper
+// Supports flexible meal sequences and snack logic
 function foodsForMealIndex(mealIndex, totalMeals){
-  if(totalMeals === 3) return [ ['breakfast','lunch','dinner'][mealIndex] ];
-  if(totalMeals === 4) return [ ['breakfast','lunch','snack','dinner'][mealIndex] ];
-  if(totalMeals === 5) return [ ['breakfast','snack','lunch','snack','dinner'][mealIndex] ];
-  return [];
+  // Predefined valid meal orders
+  const validOrders = {
+    3: [ ['breakfast','lunch','dinner'] ],
+    4: [
+      ['breakfast','snack','lunch','dinner'],
+      ['breakfast','lunch','dinner','snack'],
+      ['breakfast','lunch','snack','dinner']
+    ],
+    5: [
+      ['breakfast','snack','lunch','snack','dinner'],
+      ['breakfast','snack','lunch','dinner','snack']
+    ]
+  };
+
+  const orders = validOrders[totalMeals];
+  if(!orders) return [];
+
+  // pick one random valid sequence for this day
+  const chosenOrder = sample(orders);
+  return [ chosenOrder[mealIndex] ];
+}
+
+// ---------------------------
+// Helper: determine which tags are allowed for a slot
+function allowedTagsForSlot(slot){
+  switch(slot){
+    case 'breakfast':
+      return ['breakfast','lunch','snack']; // breakfast can overlap lunch, snacks allowed
+    case 'lunch':
+      return ['breakfast','lunch','dinner','snack'];
+    case 'dinner':
+      return ['lunch','dinner','snack'];
+    case 'snack':
+      return ['snack','breakfast','lunch','dinner']; // snacks can appear anywhere
+    default:
+      return [];
+  }
 }
 
 // ---------------------------
 // Build a single meal while respecting dailyRemaining caps and per-meal soft target.
-// preferredTags: array (e.g. ['breakfast'])
+// Adds group deduplication to avoid multiple variants of the same base food
 function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, maxItems = 3){
   const mealItems = [];
   const subtotal = { cal: 0, p: 0, c: 0, f: 0 };
   const attemptsLimit = 400;
-  const softMult = 1.25; // each single item should not be wildly larger than per-meal slice
+  const softMult = 1.25;
   let attempts = 0;
 
-  // Helper to check if portion fits daily remaining & per-meal soft constraint
+  // Track groups used in this meal
+  const usedGroups = new Set();
+
   function portionFits(portion){
     if(!portion) return false;
     if(portion.kcal > dailyRemaining.cal) return false;
     if(portion.c > dailyRemaining.c) return false;
     if(portion.f > dailyRemaining.f) return false;
-    // per-item soft constraints (avoid huge single items in a meal)
     if(portion.kcal > perMealMax.cal * softMult) return false;
     if(portion.c > perMealMax.c * softMult) return false;
     if(portion.f > perMealMax.f * softMult) return false;
     return true;
   }
 
-  // Attempt to add up to maxItems items, preferring tag-matching foods
   while(attempts < attemptsLimit && mealItems.length < maxItems){
     attempts++;
-    // Build prioritized pools
+
+    // prioritize foods matching preferred tags
     const preferredPool = FOODS.filter(f => {
       if(foodCounts[f.name] >= maxRepeats) return false;
       if(isShake(f) && shakesUsed >= maxShakes) return false;
-      // quick reject if base food metrics already exceed remaining (min qty)
       if(f.kcal > dailyRemaining.cal) return false;
       if(f.c > dailyRemaining.c) return false;
       if(f.f > dailyRemaining.f) return false;
-      // prefer only those with preferred tags
+      if(f.group && usedGroups.has(f.group)) return false; // skip duplicate group
       return Array.isArray(f.tags) && f.tags.some(t => preferredTags.includes(t));
     });
 
@@ -201,32 +235,36 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
       if(f.kcal > dailyRemaining.cal) return false;
       if(f.c > dailyRemaining.c) return false;
       if(f.f > dailyRemaining.f) return false;
+      if(f.group && usedGroups.has(f.group)) return false;
       return true;
     });
 
-    const pool = (preferredPool.length ? preferredPool : fallbackPool);
+    const pool = preferredPool.length ? preferredPool : fallbackPool;
     if(!pool.length) break;
 
-    // choose a food, and try a few portionings until one fits
     const candidateFood = sample(pool);
     let acceptedPortion = null;
-    // If portionable, try some portion attempts; otherwise just use single serving
     const portionTries = candidateFood.portionable ? 4 : 1;
-    for(let t = 0; t < portionTries; t++){
+
+    for(let t=0; t<portionTries; t++){
       const tryPortion = candidateFood.portionable ? (function(){
-        // attempt to pick smaller qty first if necessary: try qty from min up to max
         const minQ = candidateFood.min || 1;
         const maxQ = candidateFood.max || 1;
-        // try a few sensible qty values rather than fully random to increase fit
         const tryQtys = [minQ];
         if(maxQ > minQ) tryQtys.push(Math.min(maxQ, minQ+1));
-        if(maxQ > minQ + 1) tryQtys.push(maxQ);
-        // shuffle
+        if(maxQ > minQ+1) tryQtys.push(maxQ);
         for(const q of tryQtys){
-          const portion = { ...candidateFood, qty: q, kcal: candidateFood.kcal * q, p: candidateFood.p * q, c: candidateFood.c * q, f: candidateFood.f * q, label: `${candidateFood.name} x${q}${candidateFood.unit ? ' ' + candidateFood.unit + (q>1?'s':'') : ''}` };
+          const portion = { 
+            ...candidateFood, 
+            qty: q, 
+            kcal: candidateFood.kcal*q, 
+            p: candidateFood.p*q, 
+            c: candidateFood.c*q, 
+            f: candidateFood.f*q, 
+            label: `${candidateFood.name} x${q}${candidateFood.unit ? ' ' + candidateFood.unit + (q>1?'s':'') : ''}` 
+          };
           if(portionFits(portion)) return portion;
         }
-        // fallback: try random pickPortion (less likely)
         const r = pickPortion(candidateFood);
         return portionFits(r) ? r : null;
       })() : (function(){
@@ -234,33 +272,25 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
         return portionFits(r) ? r : null;
       })();
 
-      if(tryPortion){
-        acceptedPortion = tryPortion;
-        break;
-      }
+      if(tryPortion){ acceptedPortion = tryPortion; break; }
     }
 
-    if(!acceptedPortion){
-      // nothing fit for this candidate, try another
-      continue;
-    }
+    if(!acceptedPortion) continue;
 
-    // Accept portion
     mealItems.push(acceptedPortion);
     subtotal.cal += acceptedPortion.kcal; subtotal.p += acceptedPortion.p; subtotal.c += acceptedPortion.c; subtotal.f += acceptedPortion.f;
     foodCounts[acceptedPortion.name] = (foodCounts[acceptedPortion.name] || 0) + 1;
     if(isShake(acceptedPortion)) shakesUsed++;
+    if(acceptedPortion.group) usedGroups.add(acceptedPortion.group);
 
-    // reduce daily remaining
     dailyRemaining.cal -= acceptedPortion.kcal;
     dailyRemaining.c -= acceptedPortion.c;
     dailyRemaining.f -= acceptedPortion.f;
 
-    // If we've hit per-meal soft target, stop adding
     if(subtotal.cal >= perMealMax.cal && subtotal.c >= perMealMax.c && subtotal.f >= perMealMax.f) break;
   }
 
-  // If meal ended up empty (no item fit), try to force in one small item (smallest kcal that fits remaining)
+  // fallback: add smallest viable item if meal ended empty
   if(mealItems.length === 0){
     const viable = FOODS.filter(f => {
       if(foodCounts[f.name] >= maxRepeats) return false;
@@ -268,11 +298,11 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
       if(f.kcal > dailyRemaining.cal) return false;
       if(f.c > dailyRemaining.c) return false;
       if(f.f > dailyRemaining.f) return false;
+      if(f.group && usedGroups.has(f.group)) return false;
       return true;
-    });
+    }).sort((a,b)=>a.kcal-b.kcal);
+
     if(viable.length){
-      // choose the smallest kcal viable
-      viable.sort((a,b) => a.kcal - b.kcal);
       const smallest = viable[0];
       const portion = pickPortion(smallest);
       if(portionFits(portion)){
@@ -280,6 +310,7 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
         subtotal.cal += portion.kcal; subtotal.p += portion.p; subtotal.c += portion.c; subtotal.f += portion.f;
         foodCounts[portion.name] = (foodCounts[portion.name] || 0) + 1;
         if(isShake(portion)) shakesUsed++;
+        if(portion.group) usedGroups.add(portion.group);
         dailyRemaining.cal -= portion.kcal;
         dailyRemaining.c -= portion.c;
         dailyRemaining.f -= portion.f;
