@@ -1,6 +1,11 @@
-// app.js — Safe Foods Meal Generator (daily-aware + per-meal + tag-aware + even distribution + portionable support)
+// app.js — Safe Foods Meal Generator (portion scaling ready)
+// - Supports foods.json with {portionable, min, max, unit}
+// - Expands portions dynamically with correct scaling
+// - Maintains per-meal and daily constraints
+// - Tag-aware (breakfast/lunch/snack/dinner)
+// - CSV export with qty
 
-let FOODS = []; // normalized food list
+let FOODS = [];
 
 // ---------------------------
 // Render + CSV export
@@ -11,13 +16,13 @@ function renderResult(plan) {
 
   plan.meals.forEach((meal, idx) => {
     let mcal = 0, mp = 0, mc = 0, mf = 0;
-    html += `<h4>Meal ${idx + 1}</h4><table><thead><tr><th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
+    html += `<h4>Meal ${idx + 1}</h4><table><thead><tr><th>Food</th><th>Qty</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr></thead><tbody>`;
     meal.items.forEach(it => {
       const label = it.label || it.name;
-      html += `<tr><td>${label}</td><td>${(it.kcal || 0).toFixed(0)}</td><td>${(it.p || 0).toFixed(1)}</td><td>${(it.c || 0).toFixed(1)}</td><td>${(it.f || 0).toFixed(1)}</td></tr>`;
+      html += `<tr><td>${label}</td><td>${it.qty || 1}</td><td>${(it.kcal || 0).toFixed(0)}</td><td>${(it.p || 0).toFixed(1)}</td><td>${(it.c || 0).toFixed(1)}</td><td>${(it.f || 0).toFixed(1)}</td></tr>`;
       mcal += it.kcal || 0; mp += it.p || 0; mc += it.c || 0; mf += it.f || 0;
     });
-    html += `<tr style="font-weight:700"><td>Meal subtotal</td><td>${mcal.toFixed(0)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
+    html += `<tr style="font-weight:700"><td colspan="2">Meal subtotal</td><td>${mcal.toFixed(0)}</td><td>${mp.toFixed(1)}</td><td>${mc.toFixed(1)}</td><td>${mf.toFixed(1)}</td></tr>`;
     html += `</tbody></table>`;
     grand.cal += mcal; grand.p += mp; grand.c += mc; grand.f += mf;
   });
@@ -91,12 +96,12 @@ async function loadFoods(){
     function normalizeEntry(entry){
       const name = entry.name || entry.id || (entry.label || '').toString();
       const id = entry.id || slugify(name);
-      const kcal = Number(entry.kcal ?? entry.cal ?? entry.energy ?? 0);
+      const kcal = Number(entry.kcal ?? entry.cal ?? 0);
       const p = Number(entry.p ?? entry.protein ?? 0);
-      const c = Number(entry.c ?? entry.carbs ?? entry.carbohydrates ?? 0);
+      const c = Number(entry.c ?? entry.carbs ?? 0);
       const f = Number(entry.f ?? entry.fat ?? 0);
       const tags = Array.isArray(entry.tags) ? entry.tags.slice() : [];
-      const portionable = (entry.portionable === true) || (entry.min !== undefined && entry.max !== undefined);
+      const portionable = entry.portionable || (entry.min !== undefined && entry.max !== undefined);
       const min = portionable ? Math.max(1, Number(entry.min ?? 1)) : 1;
       const max = portionable ? Math.max(min, Number(entry.max ?? min)) : 1;
       const unit = entry.unit || '';
@@ -108,14 +113,11 @@ async function loadFoods(){
         const val = raw[key];
         if(Array.isArray(val)) for(const it of val) list.push(normalizeEntry(it));
         else if(val && typeof val === 'object'){
-          const valuesAreFoodObjects = Object.values(val).some(v=>typeof v==='object'&&(v.cal!==undefined||v.kcal!==undefined||v.p!==undefined));
-          if(valuesAreFoodObjects){
-            for(const [name, metrics] of Object.entries(val)){
-              const entry = Object.assign({}, metrics);
-              if(!entry.name) entry.name = name;
-              list.push(normalizeEntry(entry));
-            }
-          } else list.push(normalizeEntry(Object.assign({ name: key }, val)));
+          for(const [name, metrics] of Object.entries(val)){
+            const entry = Object.assign({}, metrics);
+            if(!entry.name) entry.name = name;
+            list.push(normalizeEntry(entry));
+          }
         }
       }
     }
@@ -123,7 +125,7 @@ async function loadFoods(){
     const seen = new Set(); FOODS = [];
     for(const item of list){ if(!item.id) item.id = slugify(item.name); if(seen.has(item.id)) continue; seen.add(item.id); FOODS.push(item); }
     FOODS = FOODS.map(f => ({ ...f, tags: f.tags || [] }));
-    document.getElementById('result').innerHTML = `<div class="card info"><strong>Foods loaded.</strong> You can now generate a plan.</div>`;
+    document.getElementById('result').innerHTML = `<div class="card info"><strong>Foods loaded.</strong></div>`;
   }catch(err){
     console.error('Failed loading foods.json', err);
     document.getElementById('result').innerHTML = `<div class="card warn"><strong>Error loading foods.json</strong><br>${String(err)}</div>`;
@@ -131,7 +133,7 @@ async function loadFoods(){
 }
 
 // ---------------------------
-// Portioning
+// Portioning (flexible)
 function pickPortion(food){
   if(!food.portionable) return { ...food, qty: 1, label: food.name };
   const qty = rand(food.min, food.max);
@@ -149,40 +151,47 @@ function pickPortion(food){
 // ---------------------------
 // Meal tag ordering helper
 function foodsForMealIndex(mealIndex, totalMeals){
-  if(totalMeals === 3) return ['breakfast','lunch','dinner'][mealIndex] ? [ ['breakfast','lunch','dinner'][mealIndex] ] : [];
-  if(totalMeals === 4) return ['breakfast','lunch','snack','dinner'][mealIndex] ? [ ['breakfast','lunch','snack','dinner'][mealIndex] ] : [];
-  if(totalMeals === 5) return ['breakfast','snack','lunch','snack','dinner'][mealIndex] ? [ ['breakfast','snack','lunch','snack','dinner'][mealIndex] ] : [];
+  if(totalMeals === 3) return [ ['breakfast','lunch','dinner'][mealIndex] ];
+  if(totalMeals === 4) return [ ['breakfast','lunch','snack','dinner'][mealIndex] ];
+  if(totalMeals === 5) return [ ['breakfast','snack','lunch','snack','dinner'][mealIndex] ];
   return [];
 }
 
 // ---------------------------
 // Build a single meal while respecting dailyRemaining caps and per-meal soft target.
-function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags){
+// preferredTags: array (e.g. ['breakfast'])
+function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, maxItems = 3){
   const mealItems = [];
   const subtotal = { cal: 0, p: 0, c: 0, f: 0 };
   const attemptsLimit = 400;
-  const softMult = 1.25; 
+  const softMult = 1.25; // each single item should not be wildly larger than per-meal slice
   let attempts = 0;
 
+  // Helper to check if portion fits daily remaining & per-meal soft constraint
   function portionFits(portion){
     if(!portion) return false;
     if(portion.kcal > dailyRemaining.cal) return false;
     if(portion.c > dailyRemaining.c) return false;
     if(portion.f > dailyRemaining.f) return false;
+    // per-item soft constraints (avoid huge single items in a meal)
     if(portion.kcal > perMealMax.cal * softMult) return false;
     if(portion.c > perMealMax.c * softMult) return false;
     if(portion.f > perMealMax.f * softMult) return false;
     return true;
   }
 
-  while(attempts < attemptsLimit){
+  // Attempt to add up to maxItems items, preferring tag-matching foods
+  while(attempts < attemptsLimit && mealItems.length < maxItems){
     attempts++;
+    // Build prioritized pools
     const preferredPool = FOODS.filter(f => {
       if(foodCounts[f.name] >= maxRepeats) return false;
       if(isShake(f) && shakesUsed >= maxShakes) return false;
+      // quick reject if base food metrics already exceed remaining (min qty)
       if(f.kcal > dailyRemaining.cal) return false;
       if(f.c > dailyRemaining.c) return false;
       if(f.f > dailyRemaining.f) return false;
+      // prefer only those with preferred tags
       return Array.isArray(f.tags) && f.tags.some(t => preferredTags.includes(t));
     });
 
@@ -195,27 +204,35 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
       return true;
     });
 
-    const pool = preferredPool.length ? preferredPool : fallbackPool;
+    const pool = (preferredPool.length ? preferredPool : fallbackPool);
     if(!pool.length) break;
 
+    // choose a food, and try a few portionings until one fits
     const candidateFood = sample(pool);
     let acceptedPortion = null;
+    // If portionable, try some portion attempts; otherwise just use single serving
     const portionTries = candidateFood.portionable ? 4 : 1;
-
     for(let t = 0; t < portionTries; t++){
       const tryPortion = candidateFood.portionable ? (function(){
+        // attempt to pick smaller qty first if necessary: try qty from min up to max
         const minQ = candidateFood.min || 1;
         const maxQ = candidateFood.max || 1;
+        // try a few sensible qty values rather than fully random to increase fit
         const tryQtys = [minQ];
         if(maxQ > minQ) tryQtys.push(Math.min(maxQ, minQ+1));
         if(maxQ > minQ + 1) tryQtys.push(maxQ);
+        // shuffle
         for(const q of tryQtys){
           const portion = { ...candidateFood, qty: q, kcal: candidateFood.kcal * q, p: candidateFood.p * q, c: candidateFood.c * q, f: candidateFood.f * q, label: `${candidateFood.name} x${q}${candidateFood.unit ? ' ' + candidateFood.unit + (q>1?'s':'') : ''}` };
           if(portionFits(portion)) return portion;
         }
+        // fallback: try random pickPortion (less likely)
         const r = pickPortion(candidateFood);
         return portionFits(r) ? r : null;
-      })() : pickPortion(candidateFood);
+      })() : (function(){
+        const r = pickPortion(candidateFood);
+        return portionFits(r) ? r : null;
+      })();
 
       if(tryPortion){
         acceptedPortion = tryPortion;
@@ -223,20 +240,27 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
       }
     }
 
-    if(!acceptedPortion) continue;
+    if(!acceptedPortion){
+      // nothing fit for this candidate, try another
+      continue;
+    }
 
+    // Accept portion
     mealItems.push(acceptedPortion);
     subtotal.cal += acceptedPortion.kcal; subtotal.p += acceptedPortion.p; subtotal.c += acceptedPortion.c; subtotal.f += acceptedPortion.f;
     foodCounts[acceptedPortion.name] = (foodCounts[acceptedPortion.name] || 0) + 1;
     if(isShake(acceptedPortion)) shakesUsed++;
 
+    // reduce daily remaining
     dailyRemaining.cal -= acceptedPortion.kcal;
     dailyRemaining.c -= acceptedPortion.c;
     dailyRemaining.f -= acceptedPortion.f;
 
+    // If we've hit per-meal soft target, stop adding
     if(subtotal.cal >= perMealMax.cal && subtotal.c >= perMealMax.c && subtotal.f >= perMealMax.f) break;
   }
 
+  // If meal ended up empty (no item fit), try to force in one small item (smallest kcal that fits remaining)
   if(mealItems.length === 0){
     const viable = FOODS.filter(f => {
       if(foodCounts[f.name] >= maxRepeats) return false;
@@ -247,7 +271,8 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
       return true;
     });
     if(viable.length){
-      viable.sort((a,b)=>a.kcal-b.kcal);
+      // choose the smallest kcal viable
+      viable.sort((a,b) => a.kcal - b.kcal);
       const smallest = viable[0];
       const portion = pickPortion(smallest);
       if(portionFits(portion)){
@@ -266,35 +291,191 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
 }
 
 // ---------------------------
-// Build a full day
-function tryBuildDay(targets, mealCount = 4, maxShakes = 2, maxRepeats = 2, maxAttempts = 50){
+// Attempt to build a full day for a given mealCount.
+// Returns {meals, totals, mealCount} on success, or null.
+function tryBuildDay(mealCount, targets, maxShakes, maxRepeats, maxAttempts = 1200){
+  // We will do randomized trials; return first candidate that satisfies:
+  // totals.cal between calMin..calMax AND totals.c <= cMax AND totals.f <= fMax AND totals.p >= pMin
+  const calMin = targets.calMin, calMax = targets.calMax;
+  const cMax = targets.cMax, fMax = targets.fMax, pMin = targets.pMin;
+
+  // We'll keep the best candidate that stays within daily caps (cal,c,f) and has highest protein (as fallback)
+  let bestWithinCaps = null;
+  let bestWithinCapsProtein = -Infinity;
+
   for(let attempt = 0; attempt < maxAttempts; attempt++){
-    const meals = [];
+    // clone trackers
     const foodCounts = {};
     let shakesUsed = 0;
-    const dailyRemaining = { cal: targets.cal, p: targets.p, c: targets.c, f: targets.f };
-    const perMealMax = { cal: targets.cal / mealCount, p: targets.p / mealCount, c: targets.c / mealCount, f: targets.f / mealCount };
+    // dailyRemaining enforces MAXES for cal/c/f (protein not enforced upward)
+    const dailyRemaining = { cal: calMax, c: cMax, f: fMax };
+
+    const meals = [];
+    let failed = false;
 
     for(let mi = 0; mi < mealCount; mi++){
-      const tags = foodsForMealIndex(mi, mealCount);
-      const meal = buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, tags);
-      meals.push({ items: meal.mealItems, subtotal: meal.subtotal });
-      shakesUsed = meal.shakesUsed;
+      const remainingMeals = mealCount - mi;
+      // per-meal soft max = split remaining daily evenly
+      const perMealMax = {
+        cal: Math.max(1, dailyRemaining.cal / remainingMeals),
+        // don't constrain protein upper bound here (we don't enforce p max)
+        p: (targets.pMax && targets.pMax>0) ? (targets.pMax / mealCount) : 0,
+        c: Math.max(0.1, dailyRemaining.c / remainingMeals),
+        f: Math.max(0.1, dailyRemaining.f / remainingMeals)
+      };
+
+      const preferredTags = foodsForMealIndex(mi, mealCount) || [];
+      const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
+        buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3);
+
+      // If a meal ends empty, fail this attempt (we prefer retries rather than leaving empties)
+      if(!mealItems || mealItems.length === 0){
+        failed = true;
+        break;
+      }
+
+      // merge counts
+      for(const k in newCounts) foodCounts[k] = newCounts[k];
+      shakesUsed = newShakes;
+
+      meals.push({ items: mealItems });
+      // continue to next meal
     }
 
-    if(dailyRemaining.cal >= -50 && dailyRemaining.c >= -10 && dailyRemaining.f >= -5) return { meals, mealCount };
+    if(failed) continue;
+
+    // compute totals
+    const totals = meals.reduce((acc, meal) => {
+      const mcal = meal.items.reduce((s, f) => s + (f.kcal || 0), 0);
+      const mp = meal.items.reduce((s, f) => s + (f.p || 0), 0);
+      const mc = meal.items.reduce((s, f) => s + (f.c || 0), 0);
+      const mf = meal.items.reduce((s, f) => s + (f.f || 0), 0);
+      return { cal: acc.cal + mcal, p: acc.p + mp, c: acc.c + mc, f: acc.f + mf };
+    }, { cal: 0, p: 0, c: 0, f: 0 });
+
+    // Validate caps: MUST NOT exceed calMax, cMax, fMax
+    if(totals.cal <= calMax && totals.c <= cMax && totals.f <= fMax){
+      // Ensure we meet mins for calories and protein and carbs/fat mins (we aim to meet them)
+      if(totals.cal >= calMin && totals.p >= pMin && totals.c >= targets.cMin && totals.f >= targets.fMin){
+        return { meals, totals, mealCount };
+      }
+      // else keep as potential fallback if it has highest protein (prioritize higher protein under caps)
+      if(totals.p > bestWithinCapsProtein){
+        bestWithinCapsProtein = totals.p;
+        bestWithinCaps = { meals, totals, mealCount };
+      }
+    }
+    // else if totals exceed caps, we discard this attempt
   }
+
+  // no fully valid plan found — return bestWithinCaps (if any)
+  if(bestWithinCaps) return bestWithinCaps;
   return null;
 }
 
 // ---------------------------
-// Generate plan button
-function generatePlan(targets, mealCount = 4){
-  const plan = tryBuildDay(targets, mealCount);
-  if(plan) renderResult(plan);
-  else document.getElementById('result').innerHTML = `<div class="card warn">Failed to generate plan within constraints.</div>`;
+// Generate day (driver)
+function generate(){
+  if(!FOODS.length){
+    document.getElementById('result').innerHTML = `<div class="card warn"><strong>No foods loaded yet.</strong></div>`;
+    return;
+  }
+
+  const targets = {
+    calMin: Math.max(0, Number(document.getElementById('calTarget').value || 0) - Number(document.getElementById('calRange').value || 0)),
+    calMax: Number(document.getElementById('calTarget').value || 0) + Number(document.getElementById('calRange').value || 0),
+    pMin: Math.max(0, Number(document.getElementById('pTarget').value || 0) - Number(document.getElementById('pRange').value || 0)),
+    pMax: Number(document.getElementById('pTarget').value || 0) + Number(document.getElementById('pRange').value || 0),
+    cMin: Math.max(0, Number(document.getElementById('cTarget').value || 0) - Number(document.getElementById('cRange').value || 0)),
+    cMax: Number(document.getElementById('cTarget').value || 0) + Number(document.getElementById('cRange').value || 0),
+    fMin: Math.max(0, Number(document.getElementById('fTarget').value || 0) - Number(document.getElementById('fRange').value || 0)),
+    fMax: Number(document.getElementById('fTarget').value || 0) + Number(document.getElementById('fRange').value || 0)
+  };
+
+  const mealChoice = document.getElementById('mealCount').value;
+  const maxShakes = Number(document.getElementById('maxShakes').value || 0);
+  const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
+
+  const MAX_TRIES_PER_MEALCOUNT = 900; // attempts per meal-count
+  let mealCounts = mealChoice === 'optimal' ? [3,4,5] : [Number(mealChoice)];
+
+  // Try meal counts in order (if optimal we try 3,4,5)
+  for(const m of mealCounts){
+    const plan = tryBuildDay(m, targets, maxShakes, maxRepeats, MAX_TRIES_PER_MEALCOUNT);
+    if(plan){
+      renderResult(plan);
+      return;
+    }
+  }
+
+  // If we get here, nothing strictly valid was found. As a last resort, try relaxed attempts that allow small misses:
+  // We'll attempt additional randomized tries and pick a candidate with minimal overshoot penalty.
+  const relaxedAttempts = 1200;
+  let best = null;
+  let bestPenalty = Infinity;
+
+  for(const m of mealCounts){
+    for(let a = 0; a < relaxedAttempts; a++){
+      // reuse tryBuildDay but allow plans that may slightly exceed caps — we reuse the internal logic but relax maxAttempts to 1 and accept overflow
+      const candidate = (function(){
+        // simple single-pass builder similar to tryBuildDay but will accept final totals even if caps exceeded
+        const foodCounts = {};
+        let shakesUsed = 0;
+        const dailyRemaining = { cal: targets.calMax, c: targets.cMax, f: targets.fMax };
+        const meals = [];
+        let failed = false;
+        for(let mi = 0; mi < m; mi++){
+          const remainingMeals = m - mi;
+          const perMealMax = {
+            cal: Math.max(1, dailyRemaining.cal / remainingMeals),
+            p: (targets.pMax && targets.pMax>0) ? (targets.pMax / m) : 0,
+            c: Math.max(0.1, dailyRemaining.c / remainingMeals),
+            f: Math.max(0.1, dailyRemaining.f / remainingMeals)
+          };
+          const preferredTags = foodsForMealIndex(mi, m) || [];
+          const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
+            buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3);
+          if(!mealItems || mealItems.length === 0){ failed = true; break; }
+          for(const k in newCounts) foodCounts[k] = newCounts[k];
+          shakesUsed = newShakes;
+          meals.push({ items: mealItems });
+        }
+        if(failed) return null;
+        const totals = meals.reduce((acc, meal) => ({
+          cal: acc.cal + meal.items.reduce((s,f)=>s+(f.kcal||0),0),
+          p: acc.p + meal.items.reduce((s,f)=>s+(f.p||0),0),
+          c: acc.c + meal.items.reduce((s,f)=>s+(f.c||0),0),
+          f: acc.f + meal.items.reduce((s,f)=>s+(f.f||0),0)
+        }), {cal:0,p:0,c:0,f:0});
+        return { meals, totals, mealCount: m };
+      })();
+
+      if(!candidate) continue;
+
+      // penalty: strongly punish exceeding cal/c/f caps; mildly punish missing pMin or calMin
+      const overCal = Math.max(0, candidate.totals.cal - targets.calMax);
+      const overC = Math.max(0, candidate.totals.c - targets.cMax);
+      const overF = Math.max(0, candidate.totals.f - targets.fMax);
+      const missCal = Math.max(0, targets.calMin - candidate.totals.cal);
+      const missP = Math.max(0, targets.pMin - candidate.totals.p);
+
+      const penalty = overCal*50 + overC*40 + overF*40 + missCal*5 + missP*10;
+
+      if(penalty < bestPenalty){
+        bestPenalty = penalty;
+        best = candidate;
+      }
+    }
+  }
+
+  if(best){
+    renderResult(best);
+    return;
+  }
+
+  document.getElementById('result').innerHTML = `<div class="card warn"><strong>Could not generate a plan — try widening your ranges or increasing shakes/repeats.</strong></div>`;
 }
 
 // ---------------------------
-// Init
-window.addEventListener('DOMContentLoaded', () => { loadFoods(); });
+// Load foods on start
+loadFoods();
