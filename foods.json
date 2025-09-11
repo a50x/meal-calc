@@ -6,8 +6,17 @@
     "p": 4,
     "c": 33,
     "f": 2,
-    "tags": ["breakfast", "snack"],
+    "tags": ["breakfast", "lunch", "snack"],
     "portion_scalable": 1
+  },
+  {
+    "id": "hot-pocket-4-chees",
+    "name": "Hot Pocket – 4 Cheese",
+    "kcal": 300,
+    "p": 12,
+    "c": 38,
+    "f": 14,
+    "tags": ["lunch", "dinner"]
   },
   {
     "id": "bagel-creamcheese",
