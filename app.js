@@ -1,10 +1,9 @@
-// app.js — Safe Foods Meal Generator (updated with optimal digestion + tag-aware logic)
+// app.js — Safe Foods Meal Generator (updated with daily-first + tag-aware distribution)
 // - Multiple foods per meal (1..3 items per meal)
 // - Robust foods.json loader (handles arrays, category maps, name->object maps)
 // - Portionable support, fallback property names (cal / kcal), automatic id slugging
-// - Keeps searching until a valid plan is found (bounded attempts)
 // - Max shakes/repeats are per full day
-// - "Optimal" = 3–5 meals chosen dynamically, avoids giant meals
+// - "Optimal" = 3–5 meals chosen dynamically, avoids empty meals
 
 let FOODS = []; // normalized food list (objects with id,name,kcal,p,c,f,tags,portionable,min,max,unit)
 
@@ -20,6 +19,7 @@ function slugify(str) {
 }
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function sumBy(arr, key) { return arr.reduce((s, i) => s + (i[key] || 0), 0); }
 
 // ---------------------------
 // Load + normalize foods.json
@@ -45,14 +45,12 @@ async function loadFoods() {
       return { id, name, kcal, p, c, f, tags, portionable, min, max, unit };
     }
 
-    if (Array.isArray(raw)) {
-      for (const it of raw) list.push(normalizeEntry(it));
-    } else if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw)) for (const it of raw) list.push(normalizeEntry(it));
+    else if (raw && typeof raw === 'object') {
       for (const key of Object.keys(raw)) {
         const val = raw[key];
-        if (Array.isArray(val)) {
-          for (const it of val) list.push(normalizeEntry(it));
-        } else if (val && typeof val === 'object') {
+        if (Array.isArray(val)) for (const it of val) list.push(normalizeEntry(it));
+        else if (val && typeof val === 'object') {
           const valuesAreFoodObjects = Object.values(val).some(v => typeof v === 'object' && (v.cal !== undefined || v.kcal !== undefined || v.p !== undefined));
           if (valuesAreFoodObjects) {
             for (const [name, metrics] of Object.entries(val)) {
@@ -60,9 +58,7 @@ async function loadFoods() {
               if (!entry.name) entry.name = name;
               list.push(normalizeEntry(entry));
             }
-          } else {
-            list.push(normalizeEntry(Object.assign({ name: key }, val)));
-          }
+          } else list.push(normalizeEntry(Object.assign({ name: key }, val)));
         }
       }
     }
@@ -90,9 +86,7 @@ async function loadFoods() {
 // Portioning
 // ---------------------------
 function pickPortion(food) {
-  if (!food.portionable) {
-    return { ...food, qty: 1, label: food.name };
-  }
+  if (!food.portionable) return { ...food, qty: 1, label: food.name };
   const qty = rand(food.min, food.max);
   return {
     ...food,
@@ -133,64 +127,73 @@ function foodsForMealIndex(mealIndex, totalMeals) {
 }
 
 // ---------------------------
-// Candidate builder (updated: carbs/fat/cal hard, protein soft)
+// Candidate builder — daily first, then distribute
 // ---------------------------
-function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
-  const candidate = { meals: [], totals: { cal: 0, p: 0, c: 0, f: 0 } };
-  let shakesUsed = 0;
+function buildDailyCandidate(targets, maxShakes, maxRepeats) {
+  const candidateFoods = [];
   const foodCounts = {};
+  let shakesUsed = 0;
+  let totals = { cal: 0, p: 0, c: 0, f: 0 };
 
-  const calMax = Number(document.getElementById('calTarget').value || 0) + Number(document.getElementById('calRange').value || 0);
-  const cMax = Number(document.getElementById('cTarget').value || 0) + Number(document.getElementById('cRange').value || 0);
-  const fMax = Number(document.getElementById('fTarget').value || 0) + Number(document.getElementById('fRange').value || 0);
+  let attempts = 0;
+  while ((totals.c < targets.cMax || totals.f < targets.fMax || totals.cal < targets.calMax) && attempts < 10000) {
+    attempts++;
+    const food = pickPortion(sample(FOODS));
 
-  for (let m = 0; m < mealsWanted; m++) {
-    const meal = { items: [] };
-    const numItems = rand(2, 3);
-    const preferredTags = foodsForMealIndex(m, mealsWanted);
+    if (foodCounts[food.name] >= maxRepeats) continue;
+    if (isShake(food) && shakesUsed >= maxShakes) continue;
 
-    for (let i = 0; i < numItems; i++) {
-      let food, attempts = 0;
+    // Only reject if adding food would overshoot carbs/fat/calories
+    if (totals.c + food.c > targets.cMax) continue;
+    if (totals.f + food.f > targets.fMax) continue;
+    if (totals.cal + food.kcal > targets.calMax) continue;
 
-      do {
-        const taggedFoods = preferredTags.length
-          ? foods.filter(f => f.tags.some(t => preferredTags.includes(t)))
-          : foods;
-        food = pickPortion(sample(taggedFoods.length ? taggedFoods : foods));
-        attempts++;
+    candidateFoods.push(food);
+    totals.cal += food.kcal;
+    totals.p += food.p;
+    totals.c += food.c;
+    totals.f += food.f;
 
-        if (isShake(food) && shakesUsed >= maxShakes) continue;
-        if (foodCounts[food.name] >= maxRepeats) continue;
-
-        // Hard caps for carbs/fat/calories (protein soft)
-        if (candidate.totals.c + food.c > cMax) continue;
-        if (candidate.totals.f + food.f > fMax) continue;
-        if (candidate.totals.cal + food.kcal > calMax) continue;
-
-        break;
-      } while (attempts < 50);
-
-      if (attempts >= 50) continue;
-
-      meal.items.push(food);
-      if (isShake(food)) shakesUsed++;
-      foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
-
-      candidate.totals.cal += food.kcal;
-      candidate.totals.p += food.p; // protein soft
-      candidate.totals.c += food.c;
-      candidate.totals.f += food.f;
-    }
-
-    candidate.meals.push(meal);
+    if (isShake(food)) shakesUsed++;
+    foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
   }
 
-  return candidate;
+  return { foods: candidateFoods, totals };
 }
 
 // ---------------------------
-// Search / optimization
+// Distribute foods into meals by tags
 // ---------------------------
+function distributeMeals(candidateFoods, mealCount) {
+  const meals = Array.from({ length: mealCount }, () => ({ items: [] }));
+  const leftovers = [];
+
+  // First pass: place foods by tag preference
+  for (const food of candidateFoods) {
+    let placed = false;
+    for (let i = 0; i < mealCount; i++) {
+      const preferredTags = foodsForMealIndex(i, mealCount);
+      if (food.tags.some(t => preferredTags.includes(t))) {
+        meals[i].items.push(food);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) leftovers.push(food);
+  }
+
+  // Second pass: distribute leftovers evenly
+  let mealIdx = 0;
+  for (const food of leftovers) {
+    meals[mealIdx].items.push(food);
+    mealIdx = (mealIdx + 1) % mealCount;
+  }
+
+  return meals;
+}
+
+// ---------------------------
+// Score totals (for optional sorting)
 function scoreTotals(totals, targets, mealCount) {
   const pMid = (targets.pMin + targets.pMax) / 2 / mealCount;
   const cMid = (targets.cMin + targets.cMax) / 2 / mealCount;
@@ -208,31 +211,35 @@ function scoreTotals(totals, targets, mealCount) {
          Math.abs(calAvg - calMid) * 0.2;
 }
 
-function findBestForMealCount(mealCount, params, maxTries = 2000) {
+// ---------------------------
+// Find best candidate
+function findBestCandidate(mealCount, targets, maxTries = 2000) {
   const maxShakes = Number(document.getElementById('maxShakes').value || 0);
   const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
   let best = null;
 
   for (let i = 0; i < maxTries; i++) {
-    const c = buildCandidate(mealCount, FOODS, maxShakes, maxRepeats);
-    if (!c) continue;
-    if (c.totals.cal > params.calMax) continue;
+    const daily = buildDailyCandidate(targets, maxShakes, maxRepeats);
+    if (!daily || !daily.foods.length) continue;
+    const meals = distributeMeals(daily.foods, mealCount);
 
-    const sc = scoreTotals(c.totals, params, mealCount);
-    if (!best || sc < best.score) { c.score = sc; best = c; }
+    const sc = scoreTotals(daily.totals, targets, mealCount);
+    const candidate = { meals, totals: daily.totals, score: sc };
 
-    if (c.totals.p >= params.pMin && c.totals.p <= params.pMax &&
-        c.totals.c >= params.cMin && c.totals.c <= params.cMax &&
-        c.totals.f >= params.fMin && c.totals.f <= params.fMax &&
-        c.totals.cal >= params.calMin && c.totals.cal <= params.calMax) {
-      return c;
+    if (!best || sc < best.score) best = candidate;
+
+    if (daily.totals.p >= targets.pMin && daily.totals.p <= targets.pMax &&
+        daily.totals.c >= targets.cMin && daily.totals.c <= targets.cMax &&
+        daily.totals.f >= targets.fMin && daily.totals.f <= targets.fMax &&
+        daily.totals.cal >= targets.calMin && daily.totals.cal <= targets.calMax) {
+      return candidate;
     }
   }
   return best;
 }
 
 // ---------------------------
-// Generation entrypoint
+// Generate day
 // ---------------------------
 function generate() {
   if (!FOODS.length) {
@@ -256,7 +263,7 @@ function generate() {
 
   if (mealChoice !== 'optimal') {
     const m = Number(mealChoice);
-    const best = findBestForMealCount(m, targets, MAX_TOTAL_TRIES);
+    const best = findBestCandidate(m, targets, MAX_TOTAL_TRIES);
     if (!best) {
       document.getElementById('result').innerHTML = `<div class="card warn"><strong>No valid plan within ${MAX_TOTAL_TRIES} tries.</strong></div>`;
       return;
@@ -267,7 +274,7 @@ function generate() {
 
   const candidates = [];
   for (let m = 3; m <= 5; m++) {
-    const best = findBestForMealCount(m, targets, MAX_TOTAL_TRIES / 3);
+    const best = findBestCandidate(m, targets, MAX_TOTAL_TRIES / 3);
     if (best) candidates.push(Object.assign({ mealCount: m }, best));
   }
 
@@ -281,7 +288,7 @@ function generate() {
 }
 
 // ---------------------------
-// Rendering + CSV export
+// Render + CSV export
 // ---------------------------
 function renderResult(plan, params) {
   const out = document.getElementById('result');
