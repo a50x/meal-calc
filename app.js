@@ -1,4 +1,4 @@
-// app.js — Safe Foods Meal Generator (updated with optimal digestion logic)
+// app.js — Safe Foods Meal Generator (updated with optimal digestion + tag-aware logic)
 // - Multiple foods per meal (1..3 items per meal)
 // - Robust foods.json loader (handles arrays, category maps, name->object maps)
 // - Portionable support, fallback property names (cal / kcal), automatic id slugging
@@ -110,6 +110,29 @@ function isShake(food) {
 }
 
 // ---------------------------
+// Meal tag ordering
+// ---------------------------
+function foodsForMealIndex(mealIndex, totalMeals) {
+  if (totalMeals === 3) {
+    if (mealIndex === 0) return ['breakfast'];
+    if (mealIndex === 1) return ['lunch'];
+    if (mealIndex === 2) return ['dinner'];
+  } else if (totalMeals === 4) {
+    if (mealIndex === 0) return ['breakfast'];
+    if (mealIndex === 1) return ['lunch'];
+    if (mealIndex === 2) return ['snack', 'shake'];
+    if (mealIndex === 3) return ['dinner'];
+  } else if (totalMeals === 5) {
+    if (mealIndex === 0) return ['breakfast'];
+    if (mealIndex === 1) return ['snack', 'shake'];
+    if (mealIndex === 2) return ['lunch'];
+    if (mealIndex === 3) return ['snack', 'shake'];
+    if (mealIndex === 4) return ['dinner'];
+  }
+  return [];
+}
+
+// ---------------------------
 // Candidate builder
 // ---------------------------
 function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
@@ -119,19 +142,20 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
 
   for (let m = 0; m < mealsWanted; m++) {
     const meal = { items: [] };
-    const numItems = rand(2, 3); // 2–3 foods per meal
+    const numItems = rand(2, 3);
+    const preferredTags = foodsForMealIndex(m, mealsWanted);
 
     for (let i = 0; i < numItems; i++) {
       let food, attempts = 0;
 
       do {
-        food = pickPortion(sample(foods));
+        const taggedFoods = preferredTags.length
+          ? foods.filter(f => f.tags.some(t => preferredTags.includes(t)))
+          : foods;
+        food = pickPortion(sample(taggedFoods.length ? taggedFoods : foods));
         attempts++;
 
-        // enforce shake cap
         if (isShake(food) && shakesUsed >= maxShakes) continue;
-
-        // enforce repeat cap
         if (foodCounts[food.name] >= maxRepeats) continue;
 
         break;
@@ -140,8 +164,6 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
       if (attempts >= 50) continue;
 
       meal.items.push(food);
-
-      // update counters
       if (isShake(food)) shakesUsed++;
       foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
 
@@ -234,7 +256,6 @@ function generate() {
     return;
   }
 
-  // Optimal: test 3, 4, 5 meals
   const candidates = [];
   for (let m = 3; m <= 5; m++) {
     const best = findBestForMealCount(m, targets, MAX_TOTAL_TRIES / 3);
@@ -271,27 +292,52 @@ function renderResult(plan, params) {
     grand.cal += mcal; grand.p += mp; grand.c += mc; grand.f += mf;
   });
 
-  html += `<div style="margin-top:10px"><span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
-           <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
-           <span class="pill">Carbs: <strong>${grand.c.toFixed(1)} g</strong></span>
-           <span class="pill">Fat: <strong>${grand.f.toFixed(1)} g</strong></span></div>`;
+  html += `<div style="margin-top:10px">
+             <span class="pill">Calories: <strong>${grand.cal.toFixed(0)}</strong></span>
+             <span class="pill">Protein: <strong>${grand.p.toFixed(1)} g</strong></span>
+             <span class="pill">Carbs: <strong>${grand.c.toFixed(1)} g</strong></span>
+             <span class="pill">Fat: <strong>${grand.f.toFixed(1)} g</strong></span>
+           </div>`;
   out.innerHTML = html;
 
   window._lastPlan = { plan, totals: grand };
 }
 
 function exportCSV() {
-  if (!window._lastPlan) { alert('Generate a plan first'); return; }
+  if (!window._lastPlan) { 
+    alert('Generate a plan first'); 
+    return; 
+  }
+
   const rows = [['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
   window._lastPlan.plan.meals.forEach((meal, mi) => {
     meal.items.forEach(it => {
-      rows.push([`Meal ${mi+1}`, (it.label || it.name), it.qty || 1, (it.kcal || 0).toFixed(0), (it.p || 0).toFixed(1), (it.c || 0).toFixed(1), (it.f || 0).toFixed(1)]);
+      rows.push([
+        `Meal ${mi + 1}`, 
+        it.label || it.name, 
+        it.qty || 1, 
+        (it.kcal || 0).toFixed(0), 
+        (it.p || 0).toFixed(1), 
+        (it.c || 0).toFixed(1), 
+        (it.f || 0).toFixed(1)
+      ]);
     });
   });
-  rows.push(['TOTAL','', '', window._lastPlan.totals.cal.toFixed(0), window._lastPlan.totals.p.toFixed(1), window._lastPlan.totals.c.toFixed(1), window._lastPlan.totals.f.toFixed(1)]);
+
+  rows.push([
+    'TOTAL','', '', 
+    window._lastPlan.totals.cal.toFixed(0), 
+    window._lastPlan.totals.p.toFixed(1), 
+    window._lastPlan.totals.c.toFixed(1), 
+    window._lastPlan.totals.f.toFixed(1)
+  ]);
+
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'mealplan.csv'; a.click();
+  const a = document.createElement('a'); 
+  a.href = url; 
+  a.download = 'mealplan.csv'; 
+  a.click();
   URL.revokeObjectURL(url);
 }
