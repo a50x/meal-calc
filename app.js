@@ -133,12 +133,16 @@ function foodsForMealIndex(mealIndex, totalMeals) {
 }
 
 // ---------------------------
-// Candidate builder
+// Candidate builder (updated: carbs/fat/cal hard, protein soft)
 // ---------------------------
 function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
   const candidate = { meals: [], totals: { cal: 0, p: 0, c: 0, f: 0 } };
   let shakesUsed = 0;
   const foodCounts = {};
+
+  const calMax = Number(document.getElementById('calTarget').value || 0) + Number(document.getElementById('calRange').value || 0);
+  const cMax = Number(document.getElementById('cTarget').value || 0) + Number(document.getElementById('cRange').value || 0);
+  const fMax = Number(document.getElementById('fTarget').value || 0) + Number(document.getElementById('fRange').value || 0);
 
   for (let m = 0; m < mealsWanted; m++) {
     const meal = { items: [] };
@@ -158,6 +162,11 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
         if (isShake(food) && shakesUsed >= maxShakes) continue;
         if (foodCounts[food.name] >= maxRepeats) continue;
 
+        // Hard caps for carbs/fat/calories (protein soft)
+        if (candidate.totals.c + food.c > cMax) continue;
+        if (candidate.totals.f + food.f > fMax) continue;
+        if (candidate.totals.cal + food.kcal > calMax) continue;
+
         break;
       } while (attempts < 50);
 
@@ -168,7 +177,7 @@ function buildCandidate(mealsWanted, foods, maxShakes, maxRepeats) {
       foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
 
       candidate.totals.cal += food.kcal;
-      candidate.totals.p += food.p;
+      candidate.totals.p += food.p; // protein soft
       candidate.totals.c += food.c;
       candidate.totals.f += food.f;
     }
