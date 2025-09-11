@@ -1,4 +1,4 @@
-// app.js — Safe Foods Meal Generator (updated with daily-first + tag-aware distribution)
+// app.js — Safe Foods Meal Generator (updated with daily-first + tag-aware + even distribution)
 // - Multiple foods per meal (1..3 items per meal)
 // - Robust foods.json loader (handles arrays, category maps, name->object maps)
 // - Portionable support, fallback property names (cal / kcal), automatic id slugging
@@ -127,7 +127,7 @@ function foodsForMealIndex(mealIndex, totalMeals) {
 }
 
 // ---------------------------
-// Candidate builder — daily first, then distribute
+// Build daily candidate
 // ---------------------------
 function buildDailyCandidate(targets, maxShakes, maxRepeats) {
   const candidateFoods = [];
@@ -143,7 +143,6 @@ function buildDailyCandidate(targets, maxShakes, maxRepeats) {
     if (foodCounts[food.name] >= maxRepeats) continue;
     if (isShake(food) && shakesUsed >= maxShakes) continue;
 
-    // Only reject if adding food would overshoot carbs/fat/calories
     if (totals.c + food.c > targets.cMax) continue;
     if (totals.f + food.f > targets.fMax) continue;
     if (totals.cal + food.kcal > targets.calMax) continue;
@@ -162,13 +161,13 @@ function buildDailyCandidate(targets, maxShakes, maxRepeats) {
 }
 
 // ---------------------------
-// Distribute foods into meals by tags
+// Distribute foods into meals evenly and by tag
 // ---------------------------
 function distributeMeals(candidateFoods, mealCount) {
   const meals = Array.from({ length: mealCount }, () => ({ items: [] }));
   const leftovers = [];
 
-  // First pass: place foods by tag preference
+  // First pass: tag-based placement
   for (const food of candidateFoods) {
     let placed = false;
     for (let i = 0; i < mealCount; i++) {
@@ -182,7 +181,7 @@ function distributeMeals(candidateFoods, mealCount) {
     if (!placed) leftovers.push(food);
   }
 
-  // Second pass: distribute leftovers evenly
+  // Second pass: evenly distribute leftovers
   let mealIdx = 0;
   for (const food of leftovers) {
     meals[mealIdx].items.push(food);
@@ -193,7 +192,7 @@ function distributeMeals(candidateFoods, mealCount) {
 }
 
 // ---------------------------
-// Score totals (for optional sorting)
+// Score totals (optional)
 function scoreTotals(totals, targets, mealCount) {
   const pMid = (targets.pMin + targets.pMax) / 2 / mealCount;
   const cMid = (targets.cMin + targets.cMax) / 2 / mealCount;
