@@ -10,23 +10,23 @@
     "portion_scalable": 1
   },
   {
-    "id": "carnation-rtd-rich-chocolate",
-    "name": "Carnation Breakfast Essentials RTD – Rich Milk Chocolate (8 fl oz)",
+    "id": "carnation-rtd-hp",
+    "name": "Carnation Breakfast Essentials RTD / Ready-to-Drink High Protein – Rich Milk Chocolate (8 fl oz)",
     "kcal": 220,
     "p": 15,
     "c": 27,
     "f": 6,
-    "tags": ["breakfast", "snack"]
+    "tags": ["shake", "breakfast", "snack"]
   },
   {
-    "id": "carnation-powder-fairlife-rich-chocolate",
-    "name": "Carnation Breakfast Essentials Powder + Fairlife – Rich Milk Chocolate (8 fl oz)",
+    "id": "carnation-powder-fairlife",
+    "name": "Carnation High-Protein Powder (prepared with Fairlife Whole Ultra-Filtered, 1 scoop + 1 cup milk)",
     "kcal": 290,
     "p": 23,
     "c": 15,
     "f": 8,
-    "tags": ["breakfast", "snack"],
-    "portion_scalable": 1
+    "tags": ["shake", "breakfast", "snack"],
+    "portion_scalable": 0.5
   },
   {
     "id": "hot-pocket-4-cheese",
@@ -66,7 +66,7 @@
   },
   {
     "id": "cereal-honeybunchesofoats",
-    "name": "Honey Bunches of Oats (1 bowl + Horizon milk)",
+    "name": "Honey Bunches of Oats + Horizon Whole Milk (1 cup cereal + 1 cup milk)",
     "kcal": 280,
     "p": 8,
     "c": 48,
@@ -76,7 +76,7 @@
   },
   {
     "id": "cereal-honeybunchesofoats-fairlife",
-    "name": "Honey Bunches of Oats (1 bowl + Fairlife milk)",
+    "name": "Honey Bunches of Oats + Fairlife Whole Milk (1 cup cereal + 1 cup milk)",
     "kcal": 280,
     "p": 12,
     "c": 46,
@@ -86,7 +86,7 @@
   },
   {
     "id": "cereal-cheerios",
-    "name": "Cheerios (1 bowl + Horizon milk)",
+    "name": "Cheerios + Horizon Whole Milk (1 cup cereal + 1 cup milk)",
     "kcal": 270,
     "p": 8,
     "c": 45,
@@ -96,7 +96,7 @@
   },
   {
     "id": "cereal-cheerios-fairlife",
-    "name": "Cheerios (1 bowl + Fairlife milk)",
+    "name": "Cheerios + Fairlife (1 cup cereal + 1 cup milk)",
     "kcal": 270,
     "p": 12,
     "c": 43,
@@ -106,7 +106,7 @@
   },
   {
     "id": "cereal-ricekrispies",
-    "name": "Rice Krispies (1 bowl + Horizon milk)",
+    "name": "Rice Krispies + Milk (1 cup cereal + 1 cup milk)",
     "kcal": 250,
     "p": 7,
     "c": 47,
@@ -116,7 +116,7 @@
   },
   {
     "id": "cereal-ricekrispies-fairlife",
-    "name": "Rice Krispies (1 bowl + Fairlife milk)",
+    "name": "Rice Krispies + Fairlife (1 cup cereal + 1 cup milk)",
     "kcal": 250,
     "p": 11,
     "c": 45,
@@ -126,7 +126,7 @@
   },
   {
     "id": "protein-cheerios-horizon",
-    "name": "Cinnamon/Cookies & Crème Protein Cheerios + Horizon Whole Milk",
+    "name": "Cinnamon / Cookies & Crème Protein Cheerios + Horizon Whole Milk (1 cup cereal + 1 cup milk)",
     "kcal": 300,
     "p": 16,
     "c": 36,
@@ -135,7 +135,7 @@
   },
   {
     "id": "protein-cheerios-fairlife",
-    "name": "Cinnamon/Cookies & Crème Protein Cheerios + Fairlife Whole Milk",
+    "name": "Cinnamon / Cookies & Crème Protein Cheerios + Fairlife Whole Milk (1 cup cereal + 1 cup milk)",
     "kcal": 300,
     "p": 20,
     "c": 34,
@@ -161,15 +161,6 @@
     "tags": ["snack", "breakfast"]
   },
   {
-    "id": "carnation-rtd-hp",
-    "name": "Carnation Ready-to-Drink High Protein – Rich Milk Chocolate",
-    "kcal": 220,
-    "p": 15,
-    "c": 27,
-    "f": 6,
-    "tags": ["shake", "breakfast", "snack"]
-  },
-  {
     "id": "carnation-powder-horizon",
     "name": "Carnation High-Protein Powder (prepared with Horizon Whole Milk, 1 cup)",
     "kcal": 300,
@@ -179,32 +170,25 @@
     "tags": ["shake", "breakfast", "snack"]
   },
   {
-    "id": "carnation-powder-fairlife",
-    "name": "Carnation High-Protein Powder (prepared with Fairlife Whole Ultra-Filtered, 1 cup)",
-    "kcal": 290,
-    "p": 23,
-    "c": 15,
-    "f": 8,
-    "tags": ["shake", "breakfast", "snack"]
-  },
-  {
     "id": "ghost-protein-horizon",
-    "name": "Ghost Protein Powder + Horizon Whole Milk (Cinnabon flavor)",
+    "name": "Ghost Protein Powder (1 scoop) + Horizon Whole Milk (1 cup)",
     "kcal": 240,
     "p": 27,
     "c": 14,
     "f": 7,
-    "tags": ["shake", "breakfast", "snack"]
+    "tags": ["shake", "breakfast", "snack"],
+    "portion_scalable": 1
   },
   {
     "id": "ghost-protein-fairlife",
-    "name": "Ghost Protein Powder + Fairlife Whole Milk (Cinnabon flavor)",
+    "name": "Ghost Protein Powder (1 scoop) + Fairlife Whole Milk (1 cup)",
     "kcal": 240,
     "p": 31,
     "c": 12,
     "f": 7,
-    "tags": ["shake", "breakfast", "snack"]
-  },
+    "tags": ["shake", "breakfast", "snack"],
+    "portion_scalable": 1
+  }
   {
     "id": "pancakes-maple",
     "name": "Pancakes (with maple syrup)",
