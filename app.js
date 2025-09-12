@@ -149,7 +149,6 @@ function pickPortion(food){
 }
 
 // ---------------------------
-// Meal tag ordering helper
 // Build valid meal sequence dynamically
 function buildMealOrder(totalMeals) {
   const base = ['breakfast', 'lunch', 'dinner'];
@@ -171,65 +170,45 @@ function buildMealOrder(totalMeals) {
 
   while (snacksToInsert > 0 && gaps.length > 0) {
     const g = sample(gaps);
-    // Prevent back-to-back snacks:
+    // Prevent back-to-back snacks
     if ((g > 0 && slots[g - 1] === 'snack') ||
         (g < slots.length && slots[g] === 'snack')) {
-      // skip this gap
       gaps = gaps.filter(x => x !== g);
       continue;
     }
     slots.splice(g, 0, 'snack');
     snacksToInsert--;
-    // Update gaps indexes after insertion
-    gaps = [0];
-    for (let i = 1; i <= slots.length; i++) gaps.push(i);
+
+    // Rebuild gaps to reflect updated array length
+    gaps = [];
+    for (let i = 0; i <= slots.length; i++) gaps.push(i);
   }
 
   return slots;
 }
 
-// Return allowed tags for a given mealIndex
+// ---------------------------
+// Meal tag ordering helper
+// Supports flexible meal sequences and snack logic
 function foodsForMealIndex(mealIndex, totalMeals) {
   if (!window._mealOrder || window._mealOrder.length !== totalMeals) {
     window._mealOrder = buildMealOrder(totalMeals);
   }
   return [window._mealOrder[mealIndex]];
 }
-(mealIndex, totalMeals){
-  // Predefined valid meal orders
-  const validOrders = {
-    3: [ ['breakfast','lunch','dinner'] ],
-    4: [
-      ['breakfast','snack','lunch','dinner'],
-      ['breakfast','lunch','dinner','snack'],
-      ['breakfast','lunch','snack','dinner']
-    ],
-    5: [
-      ['breakfast','snack','lunch','snack','dinner'],
-      ['breakfast','snack','lunch','dinner','snack']
-    ]
-  };
-
-  const orders = validOrders[totalMeals];
-  if(!orders) return [];
-
-  // pick one random valid sequence for this day
-  const chosenOrder = sample(orders);
-  return [ chosenOrder[mealIndex] ];
-}
 
 // ---------------------------
 // Helper: determine which tags are allowed for a slot
-function allowedTagsForSlot(slot){
-  switch(slot){
+function allowedTagsForSlot(slot) {
+  switch (slot) {
     case 'breakfast':
-      return ['breakfast','lunch','snack']; // breakfast can overlap lunch, snacks allowed
+      return ['breakfast', 'lunch', 'snack']; // breakfast can overlap
     case 'lunch':
-      return ['breakfast','lunch','dinner','snack'];
+      return ['breakfast', 'lunch', 'dinner', 'snack'];
     case 'dinner':
-      return ['lunch','dinner','snack'];
+      return ['lunch', 'dinner', 'snack'];
     case 'snack':
-      return ['snack','breakfast','lunch','dinner']; // snacks can appear anywhere
+      return ['snack', 'breakfast', 'lunch', 'dinner']; // snacks flexible
     default:
       return [];
   }
