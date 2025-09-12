@@ -150,8 +150,52 @@ function pickPortion(food){
 
 // ---------------------------
 // Meal tag ordering helper
-// Supports flexible meal sequences and snack logic
-function foodsForMealIndex(mealIndex, totalMeals){
+// Build valid meal sequence dynamically
+function buildMealOrder(totalMeals) {
+  const base = ['breakfast', 'lunch', 'dinner'];
+  let snacksToInsert = 0;
+
+  if (totalMeals === 3) {
+    snacksToInsert = 0;
+  } else if (totalMeals === 4) {
+    snacksToInsert = rand(1, 2); // allow 1–2 snacks
+  } else if (totalMeals === 5) {
+    snacksToInsert = rand(2, 3); // allow 2–3 snacks
+  }
+
+  // Start with base in order
+  let slots = ['breakfast', 'lunch', 'dinner'];
+
+  // Possible gaps to insert snacks (before B, between B/L, between L/D, after D)
+  let gaps = [0, 1, 2, 3];
+
+  while (snacksToInsert > 0 && gaps.length > 0) {
+    const g = sample(gaps);
+    // Prevent back-to-back snacks:
+    if ((g > 0 && slots[g - 1] === 'snack') ||
+        (g < slots.length && slots[g] === 'snack')) {
+      // skip this gap
+      gaps = gaps.filter(x => x !== g);
+      continue;
+    }
+    slots.splice(g, 0, 'snack');
+    snacksToInsert--;
+    // Update gaps indexes after insertion
+    gaps = [0];
+    for (let i = 1; i <= slots.length; i++) gaps.push(i);
+  }
+
+  return slots;
+}
+
+// Return allowed tags for a given mealIndex
+function foodsForMealIndex(mealIndex, totalMeals) {
+  if (!window._mealOrder || window._mealOrder.length !== totalMeals) {
+    window._mealOrder = buildMealOrder(totalMeals);
+  }
+  return [window._mealOrder[mealIndex]];
+}
+(mealIndex, totalMeals){
   // Predefined valid meal orders
   const validOrders = {
     3: [ ['breakfast','lunch','dinner'] ],
