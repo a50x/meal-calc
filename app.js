@@ -328,7 +328,7 @@ function tryBuildDay(mealCount, targets, maxShakes, maxRepeats, seededLocked = {
       const remainingMeals = mealCount - mi;
       const perMealMax = {
         cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-        p: (targets.pMax && targets.pMax>0) ? (targets.pMax / mealCount) : 0,
+        p: (targets.pMax && targets.pMax>0) ? (targets.pMax / mealCount) : Infinty,
         c: Math.max(0.1, dailyRemaining.c / remainingMeals),
         f: Math.max(0.1, dailyRemaining.f / remainingMeals)
       };
