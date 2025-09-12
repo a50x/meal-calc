@@ -809,17 +809,26 @@ function generate(){
   // Build seededLocked structure from LOCKS and the previous plan (if any)
   const seededLocked = { mealsByIndex: {}, itemsByUid: {} };
   const prevPlan = window._lastPlan && window._lastPlan.plan;
-  if(prevPlan) {
-    // fill seededLocked.mealsByIndex for locked meals
+  if (prevPlan) {
     prevPlan.meals.forEach((meal, mi) => {
-      if(meal._uid && LOCKS.meals[meal._uid]) {
-        // clone items to freeze them
-        seededLocked.mealsByIndex[mi] = meal.items.map(it => ({ ...it }));
+      // ensure meal UID
+      const mealUid = meal._uid || uid('m');
+  
+      // if entire meal is locked
+      if (mealUid && LOCKS.meals[mealUid]) {
+        seededLocked.mealsByIndex[mi] = meal.items.map(it => ({
+          ...it,
+          _uid: it._uid || uid('i')
+        }));
       } else {
-        // individual item locks: for each item locked, place into seededLocked.mealsByIndex[mi]
+        // individual item locks
         meal.items.forEach(it => {
-          if(it._uid && LOCKS.foods[it._uid]) {
-            if(!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
+          const itemUid = it._uid || uid('i');
+          it._uid = itemUid; // assign UID immediately
+  
+          if (it._uid && LOCKS.foods[it._uid]) {
+            // initialize array if not present
+            if (!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
             seededLocked.mealsByIndex[mi].push({ ...it });
             seededLocked.itemsByUid[it._uid] = { item: { ...it }, mi };
           }
@@ -827,6 +836,7 @@ function generate(){
       }
     });
   }
+
 
   for (const m of mealCounts) {
     // important: ensure meal order is re-generated (new random snack slots) each try
@@ -852,103 +862,133 @@ function generate(){
     }
   }
 
-  // if we reach here, try relaxed candidate selection like before (penalty-based)
-  // We'll attempt multiple random candidates while honoring seededLocked and pick least-penalty.
-  let best = null;
-  let bestPenalty = Infinity;
-  const relaxedAttempts = 1500;
+// if we reach here, try relaxed candidate selection like before (penalty-based)
+// We'll attempt multiple random candidates while honoring seededLocked and pick least-penalty.
+let best = null;
+let bestPenalty = Infinity;
+const relaxedAttempts = 1500;
 
-  for (const m of mealCounts) {
-    window._mealOrder = buildMealOrder(m);
-    for(let a = 0; a < relaxedAttempts; a++){
-      // single-pass builder that accepts slight overshoot
-      const foodCounts = {};
-      let shakesUsed = 0;
-      let dailyRemaining = { cal: targets.calMax, c: targets.cMax, f: targets.fMax };
-      const meals = [];
-      let failed = false;
-      for(let mi = 0; mi < m; mi++){
-        const remainingMeals = m - mi;
-        const perMealMax = {
-          cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-          p: (targets.pMax && targets.pMax>0) ? (targets.pMax / m) : 0,
-          c: Math.max(0.1, dailyRemaining.c / remainingMeals),
-          f: Math.max(0.1, dailyRemaining.f / remainingMeals)
-        };
-        const preferredTags = foodsForMealIndex(mi, m) || [];
-        const prePlaced = (seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi]) ? seededLocked.mealsByIndex[mi] : [];
-        const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
-          buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
-        if(!mealItems || mealItems.length === 0){ failed = true; break; }
-        // merge
-        for(const k in newCounts) foodCounts[k] = newCounts[k];
-        shakesUsed = newShakes;
-        meals.push({ items: mealItems });
-      }
-      if(failed) continue;
+for (const m of mealCounts) {
+  window._mealOrder = buildMealOrder(m);
 
-      const totals = computeTotals({ meals });
-      // penalty
-      const overCal = Math.max(0, totals.cal - targets.calMax);
-      const overC = Math.max(0, totals.c - targets.cMax);
-      const overF = Math.max(0, totals.f - targets.fMax);
-      const missCal = Math.max(0, targets.calMin - totals.cal);
-      const missP = Math.max(0, targets.pMin - totals.p);
-      const penalty = overCal*50 + overC*40 + overF*40 + missCal*5 + missP*10;
-      if(penalty < bestPenalty){
-        bestPenalty = penalty;
-        best = { meals, totals, mealCount: m };
+  for (let a = 0; a < relaxedAttempts; a++) {
+    // single-pass builder that accepts slight overshoot
+    const foodCounts = {};
+    let shakesUsed = 0;
+    let dailyRemaining = { cal: targets.calMax, c: targets.cMax, f: targets.fMax };
+    const meals = [];
+    let failed = false;
+
+    for (let mi = 0; mi < m; mi++) {
+      const remainingMeals = m - mi;
+      const perMealMax = {
+        cal: Math.max(1, dailyRemaining.cal / remainingMeals),
+        p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / m) : 0,
+        c: Math.max(0.1, dailyRemaining.c / remainingMeals),
+        f: Math.max(0.1, dailyRemaining.f / remainingMeals)
+      };
+
+      const preferredTags = foodsForMealIndex(mi, m) || [];
+      const prePlaced = (seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi])
+        ? seededLocked.mealsByIndex[mi]
+        : [];
+
+      const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
+        buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
+
+      if (!mealItems || mealItems.length === 0) {
+        failed = true;
+        break;
       }
+
+      // merge
+      for (const k in newCounts) foodCounts[k] = newCounts[k];
+      shakesUsed = newShakes;
+      meals.push({ items: mealItems });
+    }
+
+    if (failed) continue;
+
+    const totals = computeTotals({ meals });
+    // penalty
+    const overCal = Math.max(0, totals.cal - targets.calMax);
+    const overC = Math.max(0, totals.c - targets.cMax);
+    const overF = Math.max(0, totals.f - targets.fMax);
+    const missCal = Math.max(0, targets.calMin - totals.cal);
+    const missP = Math.max(0, targets.pMin - totals.p);
+    const penalty = overCal * 50 + overC * 40 + overF * 40 + missCal * 5 + missP * 10;
+
+    if (penalty < bestPenalty) {
+      bestPenalty = penalty;
+      best = { meals, totals, mealCount: m };
     }
   }
+}
 
-  if(best){
-    // ensure uids
-    best.meals = best.meals.map(m => ({ _uid: uid('m'), items: m.items.map(it => it._uid?it:{...it,_uid:uid('i')}) }));
-    renderResult(best);
-    return;
-  }
+if (best) {
+  // ensure UIDs for meals and items
+  best.meals = best.meals.map(m => ({
+    _uid: m._uid || uid('m'),
+    items: m.items.map(it => ({
+      ...it,
+      _uid: it._uid || uid('i')
+    }))
+  }));
+  renderResult(best);
+  return;
+}
 
-  document.getElementById('result').innerHTML = `<div class="card warn"><strong>Could not generate a plan — try widening your ranges or increasing shakes/repeats.</strong></div>`;
+// process seeded locked items
+mealCounts.forEach((meal, mi) => {
+  if (!meal || !meal.items) return;
+
+  meal.items.forEach(it => {
+    if (it && it._uid && LOCKS.foods[it._uid]) {
+      seededLocked.mealsByIndex[mi] = seededLocked.mealsByIndex[mi] || [];
+      seededLocked.mealsByIndex[mi].push({ ...it });
+    }
+  });
+});
+
+let result = null;
+for (const mc of mealCounts) {
+  result = tryBuildDay(mc, targets, maxShakes, maxRepeats, seededLocked, MAX_TRIES_PER_MEALCOUNT);
+  if (result) break;
+}
+
+if (result) {
+  renderResult(result);
+} else {
+  document.getElementById('result').innerHTML = `
+    <div class="card warn">
+      <strong>Failed to generate a valid day with the current constraints.</strong>
+    </div>`;
 }
 
 // ---------------------------
-// CSV export (keeps previous behaviour)
-function exportCSV() {
-  if (!window._lastPlan) {
-    alert('Generate a plan first');
-    return;
-  }
-  const rows = [['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
-  window._lastPlan.plan.meals.forEach((meal, mi) => {
+// CSV Export
+function exportCSV(plan){
+  if(!plan) return;
+  let csv = 'Meal,Food,Qty,kcal,Protein,Carbs,Fat\n';
+  plan.meals.forEach((meal, mi) => {
     meal.items.forEach(it => {
-      rows.push([
-        `Meal ${mi + 1}`,
-        it.label || it.name,
-        it.qty || 1,
-        (it.kcal || 0).toFixed(0),
-        (it.p || 0).toFixed(1),
-        (it.c || 0).toFixed(1),
-        (it.f || 0).toFixed(1)
-      ]);
+      csv += `${mi+1},${it.name},${it.qty || 1},${it.kcal.toFixed(0)},${it.p.toFixed(1)},${it.c.toFixed(1)},${it.f.toFixed(1)}\n`;
     });
   });
-  rows.push([
-    'TOTAL','', '',
-    window._lastPlan.totals.cal.toFixed(0),
-    window._lastPlan.totals.p.toFixed(1),
-    window._lastPlan.totals.c.toFixed(1),
-    window._lastPlan.totals.f.toFixed(1)
-  ]);
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'mealplan.csv';
+  a.download = `meal_plan.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ---------------------------
+// Initial wiring
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('exportCsvBtn').addEventListener('click', () => exportCSV(window._lastPlan.plan));
+window.addEventListener('load', loadFoods);
 
 // ---------------------------
 // Small helper: quick demo generate (keeps same API but tries to use real generator)
