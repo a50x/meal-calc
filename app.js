@@ -816,27 +816,39 @@ function generate(){
   
       // if entire meal is locked
       if (mealUid && LOCKS.meals[mealUid]) {
-        seededLocked.mealsByIndex[mi] = meal.items.map(it => ({
-          ...it,
-          _uid: it._uid || uid('i')
-        }));
-      } else {
-        // individual item locks
+        seededLocked.mealsByIndex[mi] = meal.items.map(it => ({ ...it }));
         meal.items.forEach(it => {
-          const itemUid = it._uid || uid('i');
-          it._uid = itemUid; // assign UID immediately
-  
-          if (it._uid && LOCKS.foods[it._uid]) {
-            // initialize array if not present
-            if (!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
-            seededLocked.mealsByIndex[mi].push({ ...it });
-            seededLocked.itemsByUid[it._uid] = { item: { ...it }, mi };
-          }
+          seededLocked.itemsByUid[it._uid] = { item: it, mi };
         });
       }
+
+      // also handle individual locked foods
+      meal.items.forEach(it => {
+        if (LOCKS.foods[it._uid]) {
+          seededLocked.itemsByUid[it._uid] = { item: it, mi };
+          if (!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
+          if (!seededLocked.mealsByIndex[mi].some(x => x._uid === it._uid)) {
+            seededLocked.mealsByIndex[mi].push(it);
+          }
+        }
+      });
     });
   }
 
+  let plan = null;
+  for (const count of mealCounts) {
+    plan = tryBuildDay(count, targets, maxShakes, maxRepeats, seededLocked);
+    if (plan) break;
+  }
+
+  if (!plan) {
+    document.getElementById('result').innerHTML = `<div class="card warn"><strong>Failed to generate a plan. Try adjusting targets.</strong></div>`;
+    return;
+  }
+
+  window._lastPlan = plan;
+  renderResult(plan);
+}
 
   for (const m of mealCounts) {
     // important: ensure meal order is re-generated (new random snack slots) each try
