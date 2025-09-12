@@ -895,7 +895,7 @@ for (const m of mealCounts) {
       const remainingMeals = m - mi;
       const perMealMax = {
         cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-        p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / m) : 0,
+        p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / Math.max(1, mealCount)) : targets.pMin || 0
         c: Math.max(0.1, dailyRemaining.c / remainingMeals),
         f: Math.max(0.1, dailyRemaining.f / remainingMeals)
       };
