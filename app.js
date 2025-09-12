@@ -99,27 +99,21 @@ function pickPortion(food){
 }
 
 // ---------------------------
-// Build a single meal while respecting dailyRemaining caps and per-meal soft target.
-// Accepts optional prePlacedItems (array) to honor locked items already in the meal.
-// Returns mealItems and updated trackers
+// Build a single meal while respecting dailyRemaining caps and per-meal soft target
 function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, maxItems = 3, prePlacedItems = []) {
   const mealItems = [];
   const subtotal = { cal: 0, p: 0, c: 0, f: 0 };
   const attemptsLimit = 400;
   const softMult = 1.25;
   let attempts = 0;
-
-  // Track groups used in this meal
   const usedGroups = new Set();
 
-  // Insert prePlaced items first
   if (Array.isArray(prePlacedItems) && prePlacedItems.length) {
     for (const it of prePlacedItems) {
       if (it.kcal > dailyRemaining.cal || it.c > dailyRemaining.c || it.f > dailyRemaining.f) {
         console.log('PrePlaced item too large for remaining:', it, dailyRemaining);
         return { mealItems: [], subtotal, foodCounts, shakesUsed, error: 'prePlaced overflow' };
       }
-      console.log('Adding prePlaced item:', it);
       mealItems.push(it);
       subtotal.cal += it.kcal; subtotal.p += it.p; subtotal.c += it.c; subtotal.f += it.f;
       foodCounts[it.name] = (foodCounts[it.name] || 0) + 1;
@@ -133,25 +127,21 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
 
   function portionFits(portion) {
     if (!portion) return false;
-    if (portion.kcal > dailyRemaining.cal) { console.log('Reject kcal:', portion, dailyRemaining); return false; }
-    if (portion.c > dailyRemaining.c) { console.log('Reject carbs:', portion, dailyRemaining); return false; }
-    if (portion.f > dailyRemaining.f) { console.log('Reject fat:', portion, dailyRemaining); return false; }
-    if (portion.kcal > perMealMax.cal * softMult) { console.log('Reject perMealMax cal:', portion, perMealMax); return false; }
-    if (portion.c > perMealMax.c * softMult) { console.log('Reject perMealMax c:', portion, perMealMax); return false; }
-    if (portion.f > perMealMax.f * softMult) { console.log('Reject perMealMax f:', portion, perMealMax); return false; }
+    if (portion.kcal > dailyRemaining.cal) return false;
+    if (portion.c > dailyRemaining.c) return false;
+    if (portion.f > dailyRemaining.f) return false;
+    if (portion.kcal > perMealMax.cal * softMult) return false;
+    if (portion.c > perMealMax.c * softMult) return false;
+    if (portion.f > perMealMax.f * softMult) return false;
     return true;
   }
 
   while (attempts < attemptsLimit && mealItems.length < maxItems) {
     attempts++;
-    console.log('buildMeal attempt', attempts, 'mealItems length', mealItems.length, 'dailyRemaining', dailyRemaining, 'subtotal', subtotal);
-
     const preferredPool = FOODS.filter(f => {
       if (foodCounts[f.name] >= maxRepeats) return false;
       if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
+      if (f.kcal > dailyRemaining.cal || f.c > dailyRemaining.c || f.f > dailyRemaining.f) return false;
       if (f.group && usedGroups.has(f.group)) return false;
       return Array.isArray(f.tags) && f.tags.some(t => preferredTags.includes(t));
     });
@@ -159,18 +149,13 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
     const fallbackPool = FOODS.filter(f => {
       if (foodCounts[f.name] >= maxRepeats) return false;
       if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
+      if (f.kcal > dailyRemaining.cal || f.c > dailyRemaining.c || f.f > dailyRemaining.f) return false;
       if (f.group && usedGroups.has(f.group)) return false;
       return true;
     });
 
     const pool = preferredPool.length ? preferredPool : fallbackPool;
-    if (!pool.length) {
-      console.log('No available foods for this attempt');
-      break;
-    }
+    if (!pool.length) break;
 
     const candidateFood = sample(pool);
     let acceptedPortion = null;
@@ -189,20 +174,13 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
         }
         const r = pickPortion(candidateFood);
         return portionFits(r) ? r : null;
-      })() : (() => {
-        const r = pickPortion(candidateFood);
-        return portionFits(r) ? r : null;
-      })();
+      })() : pickPortion(candidateFood);
 
       if (tryPortion) { acceptedPortion = tryPortion; break; }
     }
 
-    if (!acceptedPortion) {
-      console.log('No accepted portion for', candidateFood.name);
-      continue;
-    }
+    if (!acceptedPortion) continue;
 
-    console.log('Adding portion:', acceptedPortion);
     mealItems.push(acceptedPortion);
     subtotal.cal += acceptedPortion.kcal; subtotal.p += acceptedPortion.p; subtotal.c += acceptedPortion.c; subtotal.f += acceptedPortion.f;
     foodCounts[acceptedPortion.name] = (foodCounts[acceptedPortion.name] || 0) + 1;
@@ -213,39 +191,6 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
     dailyRemaining.f -= acceptedPortion.f;
 
     if (subtotal.cal >= perMealMax.cal && subtotal.c >= perMealMax.c && subtotal.f >= perMealMax.f) break;
-  }
-
-  // Fallback smallest viable
-  if (mealItems.length === 0) {
-    const viable = FOODS.filter(f => {
-      if (foodCounts[f.name] >= maxRepeats) return false;
-      if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
-      if (f.group && usedGroups.has(f.group)) return false;
-      return true;
-    }).sort((a, b) => a.kcal - b.kcal);
-
-    if (viable.length) {
-      const smallest = viable[0];
-      const portion = pickPortion(smallest);
-      if (portionFits(portion)) {
-        console.log('Fallback portion added:', portion);
-        mealItems.push(portion);
-        subtotal.cal += portion.kcal; subtotal.p += portion.p; subtotal.c += portion.c; subtotal.f += portion.f;
-        foodCounts[portion.name] = (foodCounts[portion.name] || 0) + 1;
-        if (isShake(portion)) shakesUsed++;
-        if (portion.group) usedGroups.add(portion.group);
-        dailyRemaining.cal -= portion.kcal;
-        dailyRemaining.c -= portion.c;
-        dailyRemaining.f -= portion.f;
-      } else {
-        console.log('Fallback portion rejected:', portion, dailyRemaining);
-      }
-    } else {
-      console.log('No viable foods for fallback');
-    }
   }
 
   return { mealItems, subtotal, foodCounts, shakesUsed };
