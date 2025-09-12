@@ -805,7 +805,6 @@ function generate(){
 
       plan.mealCount = m;
       renderResult(plan);
-      return;
     }
   }
 
