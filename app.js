@@ -682,7 +682,6 @@ async function onRegenClicked(e) {
     renderResult(plan);
     return;
   }
-}
 
   // type === 'meal'
   if (type === 'meal') {
