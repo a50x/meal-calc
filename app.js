@@ -684,63 +684,52 @@ async function onRegenClicked(e) {
   }
 
   // type === 'meal'
-  if (type === 'meal') {
+  if(type === 'meal') {
     const mi = Number(btn.dataset.mi);
+    // find meal uid
     const mealBlock = document.querySelector(`#result .meal-block[data-mi="${mi}"]`);
-    if (!mealBlock) return;
+    if(!mealBlock) return;
     const mealUid = mealBlock.dataset.mealUid;
-    if (LOCKS.meals[mealUid]) return; // respect meal lock
-  
-    // Collect targets and limits
+    if(LOCKS.meals[mealUid]) return;
+
+    // collect targets and limits
     const targets = collectTargetsFromUI();
     const maxShakes = Number(document.getElementById('maxShakes').value || 0);
     const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
-  
-    // Current totals
+
+    // compute dailyRemaining by removing current meal's contribution (we will try to replace entire meal)
     const currentTotals = computeTotals(plan);
     const mealTotals = mealTotalsFor(plan.meals[mi]);
-  
-    // Adjust dailyRemaining by removing current meal’s contribution
     const dailyRemaining = {
       cal: Math.max(0, targets.calMax - (currentTotals.cal - mealTotals.cal)),
-      c:   Math.max(0, targets.cMax - (currentTotals.c - mealTotals.c)),
-      f:   Math.max(0, targets.fMax - (currentTotals.f - mealTotals.f))
+      c: Math.max(0, targets.cMax - (currentTotals.c - mealTotals.c)),
+      f: Math.max(0, targets.fMax - (currentTotals.f - mealTotals.f))
     };
-  
-    // --- NEW: preserve locked foods
-    const lockedFoods = plan.meals[mi].items.filter(it => LOCKS.foods[it._uid]);
-    const prePlaced = [...lockedFoods];
-  
-    // Build replacement with locked foods pre-placed
+
+    // Attempt to build a replacement meal of 1-3 items using buildMeal logic restricted to this meal slot
     const preferredTags = foodsForMealIndex(mi, plan.mealCount) || [];
     let replacement = null;
-  
-    for (let attempts = 0; attempts < 200 && !replacement; attempts++) {
-      const foodCounts = {};
+    for(let attempts = 0; attempts < 200 && !replacement; attempts++){
+      // shallow copies for buildMeal inputs
+      const foodCounts = {}; // we purposely don't enforce global repeats here (best-effort)
       const shakesUsed = countShakesInPlan(plan) - countShakesInMeal(plan.meals[mi]);
-  
-      const perMealMax = {
-        cal: Math.max(1, dailyRemaining.cal),
-        p: 0,
-        c: Math.max(0.1, dailyRemaining.c),
-        f: Math.max(0.1, dailyRemaining.f)
-      };
-  
-      const { mealItems } = buildMeal(perMealMax, { ...dailyRemaining }, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
-  
-      if (mealItems && mealItems.length) replacement = mealItems;
+      // perMealMax roughly equals dailyRemaining (for this isolated attempt)
+      const perMealMax = { cal: Math.max(1, dailyRemaining.cal), p: 0, c: Math.max(0.1, dailyRemaining.c), f: Math.max(0.1, dailyRemaining.f) };
+      const { mealItems } = buildMeal(perMealMax, { ...dailyRemaining }, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, []);
+      if(mealItems && mealItems.length) replacement = mealItems;
     }
-  
-    // Apply replacement while preserving locked foods
-    if (replacement) {
+
+    if(replacement){
       plan.meals[mi].items = replacement;
     } else {
-      // fallback: keep locked + add random
-      plan.meals[mi].items = prePlaced.concat([pickPortion(sample(FOODS))]);
+      // worst-case: replace with two random pickPortion picks
+      plan.meals[mi].items = [pickPortion(sample(FOODS)), pickPortion(sample(FOODS))];
     }
-  
+
     renderResult(plan);
+    return;
   }
+}
 
 // ---------------------------
 // Helper: compute totals
