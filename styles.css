@@ -131,3 +131,63 @@ tr:hover td {
 .warn { color: #dc2626; font-weight: 500; }
 .small { font-size: 13px; color: var(--muted); }
 .footer-note { font-size: 13px; color: #334155; margin-top: 8px; }
+
+/* ─── Meal/Food Controls ─────────────────────────────── */
+
+.meal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.food-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lock-btn,
+.regen-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-left: 6px;
+  font-size: 15px;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  opacity: 0.25; /* default dimmed */
+}
+
+.lock-btn.active,
+.regen-btn.active {
+  opacity: 1;
+}
+
+.lock-btn:active,
+.regen-btn:active {
+  transform: scale(0.9);
+}
+
+.lock-btn:hover,
+.regen-btn:hover {
+  opacity: 0.6;
+}
+
+/* ─── Drag & Drop Indicators ─────────────────────────── */
+
+.dragging {
+  opacity: 0.5;
+}
+
+.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  background: #ecfeff;
+}
+
+/* ─── Totals Row Highlight ───────────────────────────── */
+
+tr.totals-row td {
+  font-weight: 600;
+  background: #f1f5f9;
+  border-top: 2px solid var(--border);
+}
