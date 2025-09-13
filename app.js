@@ -99,6 +99,70 @@ function pickPortion(food){
 }
 
 // ---------------------------
+// Build valid meal sequence dynamically
+function buildMealOrder(totalMeals) {
+  const base = ['breakfast', 'lunch', 'dinner'];
+  let snacksToInsert = 0;
+
+  if (totalMeals === 3) {
+    snacksToInsert = 0;
+  } else if (totalMeals === 4) {
+    snacksToInsert = rand(1, 2); // allow 1–2 snacks
+  } else if (totalMeals === 5) {
+    snacksToInsert = rand(2, 3); // allow 2–3 snacks
+  }
+
+  // Start with base in order
+  let slots = ['breakfast', 'lunch', 'dinner'];
+
+  // Possible gaps to insert snacks (before B, between B/L, between L/D, after D)
+  let gaps = [];
+  for (let i = 0; i <= slots.length; i++) gaps.push(i);
+
+  while (snacksToInsert > 0 && gaps.length > 0) {
+    const g = sample(gaps);
+    // Prevent back-to-back snacks
+    if ((g > 0 && slots[g - 1] === 'snack') || (g < slots.length && slots[g] === 'snack')) {
+      gaps = gaps.filter(x => x !== g);
+      continue;
+    }
+    slots.splice(g, 0, 'snack');
+    snacksToInsert--;
+    // rebuild gaps
+    gaps = [];
+    for (let i = 0; i <= slots.length; i++) gaps.push(i);
+  }
+
+  return slots;
+}
+
+// ---------------------------
+// Meal tag ordering helper (returns array of allowed tags for that slot)
+function foodsForMealIndex(mealIndex, totalMeals) {
+  if (!window._mealOrder || window._mealOrder.length !== totalMeals) {
+    window._mealOrder = buildMealOrder(totalMeals);
+  }
+  return [window._mealOrder[mealIndex]]; // returned as array so callers expecting array still work
+}
+
+// ---------------------------
+// Helper: determine which tags are allowed for a slot (keeps compatibility with previous logic)
+function allowedTagsForSlot(slot) {
+  switch (slot) {
+    case 'breakfast':
+      return ['breakfast', 'lunch', 'snack'];
+    case 'lunch':
+      return ['breakfast', 'lunch', 'dinner', 'snack'];
+    case 'dinner':
+      return ['lunch', 'dinner', 'snack'];
+    case 'snack':
+      return ['snack', 'breakfast', 'lunch', 'dinner'];
+    default:
+      return [];
+  }
+}
+
+// ---------------------------
 // Build a single meal while respecting dailyRemaining caps and per-meal soft target.
 // Accepts optional prePlacedItems (array) to honor locked items already in the meal.
 // Returns mealItems and updated trackers
@@ -112,14 +176,14 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
   // Track groups used in this meal
   const usedGroups = new Set();
 
-  // Insert prePlaced items first
+  // if we have prePlaced items (locked items), try inserting them first
   if (Array.isArray(prePlacedItems) && prePlacedItems.length) {
     for (const it of prePlacedItems) {
+      // ensure the item still fits into dailyRemaining (if not, generation attempt will fail upstream)
       if (it.kcal > dailyRemaining.cal || it.c > dailyRemaining.c || it.f > dailyRemaining.f) {
-        console.log('PrePlaced item too large for remaining:', it, dailyRemaining);
+        // return empty to indicate impossibility in this path
         return { mealItems: [], subtotal, foodCounts, shakesUsed, error: 'prePlaced overflow' };
       }
-      console.log('Adding prePlaced item:', it);
       mealItems.push(it);
       subtotal.cal += it.kcal; subtotal.p += it.p; subtotal.c += it.c; subtotal.f += it.f;
       foodCounts[it.name] = (foodCounts[it.name] || 0) + 1;
@@ -131,120 +195,110 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
     }
   }
 
-  function portionFits(portion) {
-    if (!portion) return false;
-    if (portion.kcal > dailyRemaining.cal) { console.log('Reject kcal:', portion, dailyRemaining); return false; }
-    if (portion.c > dailyRemaining.c) { console.log('Reject carbs:', portion, dailyRemaining); return false; }
-    if (portion.f > dailyRemaining.f) { console.log('Reject fat:', portion, dailyRemaining); return false; }
-    if (portion.kcal > perMealMax.cal * softMult) { console.log('Reject perMealMax cal:', portion, perMealMax); return false; }
-    if (portion.c > perMealMax.c * softMult) { console.log('Reject perMealMax c:', portion, perMealMax); return false; }
-    if (portion.f > perMealMax.f * softMult) { console.log('Reject perMealMax f:', portion, perMealMax); return false; }
+  function portionFits(portion){
+    if(!portion) return false;
+    if(portion.kcal > dailyRemaining.cal) return false;
+    if(portion.c > dailyRemaining.c) return false;
+    if(portion.f > dailyRemaining.f) return false;
+    if(portion.kcal > perMealMax.cal * softMult) return false;
+    if(portion.c > perMealMax.c * softMult) return false;
+    if(portion.f > perMealMax.f * softMult) return false;
     return true;
   }
 
-  while (attempts < attemptsLimit && mealItems.length < maxItems) {
+  while(attempts < attemptsLimit && mealItems.length < maxItems){
     attempts++;
-    console.log('buildMeal attempt', attempts, 'mealItems length', mealItems.length, 'dailyRemaining', dailyRemaining, 'subtotal', subtotal);
 
+    // prioritize foods matching preferred tags
     const preferredPool = FOODS.filter(f => {
-      if (foodCounts[f.name] >= maxRepeats) return false;
-      if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
-      if (f.group && usedGroups.has(f.group)) return false;
+      if(foodCounts[f.name] >= maxRepeats) return false;
+      if(isShake(f) && shakesUsed >= maxShakes) return false;
+      if(f.kcal > dailyRemaining.cal) return false;
+      if(f.c > dailyRemaining.c) return false;
+      if(f.f > dailyRemaining.f) return false;
+      if(f.group && usedGroups.has(f.group)) return false; // skip duplicate group
       return Array.isArray(f.tags) && f.tags.some(t => preferredTags.includes(t));
     });
 
     const fallbackPool = FOODS.filter(f => {
-      if (foodCounts[f.name] >= maxRepeats) return false;
-      if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
-      if (f.group && usedGroups.has(f.group)) return false;
+      if(foodCounts[f.name] >= maxRepeats) return false;
+      if(isShake(f) && shakesUsed >= maxShakes) return false;
+      if(f.kcal > dailyRemaining.cal) return false;
+      if(f.c > dailyRemaining.c) return false;
+      if(f.f > dailyRemaining.f) return false;
+      if(f.group && usedGroups.has(f.group)) return false;
       return true;
     });
 
     const pool = preferredPool.length ? preferredPool : fallbackPool;
-    if (!pool.length) {
-      console.log('No available foods for this attempt');
-      break;
-    }
+    if(!pool.length) break;
 
     const candidateFood = sample(pool);
     let acceptedPortion = null;
     const portionTries = candidateFood.portionable ? 4 : 1;
 
-    for (let t = 0; t < portionTries; t++) {
-      const tryPortion = candidateFood.portionable ? (() => {
+    for(let t=0; t<portionTries; t++){
+      const tryPortion = candidateFood.portionable ? (function(){
         const minQ = candidateFood.min || 1;
         const maxQ = candidateFood.max || 1;
         const tryQtys = [minQ];
-        if (maxQ > minQ) tryQtys.push(Math.min(maxQ, minQ + 1));
-        if (maxQ > minQ + 1) tryQtys.push(maxQ);
-        for (const q of tryQtys) {
+        if(maxQ > minQ) tryQtys.push(Math.min(maxQ, minQ+1));
+        if(maxQ > minQ+1) tryQtys.push(maxQ);
+        for(const q of tryQtys){
           const portion = pickPortion({ ...candidateFood, min: q, max: q, portionable: true });
-          if (portionFits(portion)) return portion;
+          if(portionFits(portion)) return portion;
         }
         const r = pickPortion(candidateFood);
         return portionFits(r) ? r : null;
-      })() : (() => {
+      })() : (function(){
         const r = pickPortion(candidateFood);
         return portionFits(r) ? r : null;
       })();
 
-      if (tryPortion) { acceptedPortion = tryPortion; break; }
+      if(tryPortion){ acceptedPortion = tryPortion; break; }
     }
 
-    if (!acceptedPortion) {
-      console.log('No accepted portion for', candidateFood.name);
-      continue;
-    }
+    if(!acceptedPortion) continue;
 
-    console.log('Adding portion:', acceptedPortion);
     mealItems.push(acceptedPortion);
     subtotal.cal += acceptedPortion.kcal; subtotal.p += acceptedPortion.p; subtotal.c += acceptedPortion.c; subtotal.f += acceptedPortion.f;
     foodCounts[acceptedPortion.name] = (foodCounts[acceptedPortion.name] || 0) + 1;
-    if (isShake(acceptedPortion)) shakesUsed++;
-    if (acceptedPortion.group) usedGroups.add(acceptedPortion.group);
+    if(isShake(acceptedPortion)) shakesUsed++;
+    if(acceptedPortion.group) usedGroups.add(acceptedPortion.group);
+
     dailyRemaining.cal -= acceptedPortion.kcal;
     dailyRemaining.c -= acceptedPortion.c;
     dailyRemaining.f -= acceptedPortion.f;
 
-    if (subtotal.cal >= perMealMax.cal && subtotal.c >= perMealMax.c && subtotal.f >= perMealMax.f) break;
+    // Soft stopping conditions
+    if(subtotal.cal >= perMealMax.cal && subtotal.c >= perMealMax.c && subtotal.f >= perMealMax.f) break;
   }
 
-  // Fallback smallest viable
-  if (mealItems.length === 0) {
+  // fallback: if meal ended empty (no prePlaced and couldn't add any), attempt smallest viable
+  if(mealItems.length === 0){
     const viable = FOODS.filter(f => {
-      if (foodCounts[f.name] >= maxRepeats) return false;
-      if (isShake(f) && shakesUsed >= maxShakes) return false;
-      if (f.kcal > dailyRemaining.cal) return false;
-      if (f.c > dailyRemaining.c) return false;
-      if (f.f > dailyRemaining.f) return false;
-      if (f.group && usedGroups.has(f.group)) return false;
+      if(foodCounts[f.name] >= maxRepeats) return false;
+      if(isShake(f) && shakesUsed >= maxShakes) return false;
+      if(f.kcal > dailyRemaining.cal) return false;
+      if(f.c > dailyRemaining.c) return false;
+      if(f.f > dailyRemaining.f) return false;
+      if(f.group && usedGroups.has(f.group)) return false;
       return true;
-    }).sort((a, b) => a.kcal - b.kcal);
+    }).sort((a,b)=>a.kcal-b.kcal);
 
-    if (viable.length) {
+    if(viable.length){
       const smallest = viable[0];
       const portion = pickPortion(smallest);
-      if (portionFits(portion)) {
-        console.log('Fallback portion added:', portion);
+      if(portionFits(portion)){
         mealItems.push(portion);
         subtotal.cal += portion.kcal; subtotal.p += portion.p; subtotal.c += portion.c; subtotal.f += portion.f;
         foodCounts[portion.name] = (foodCounts[portion.name] || 0) + 1;
-        if (isShake(portion)) shakesUsed++;
-        if (portion.group) usedGroups.add(portion.group);
+        if(isShake(portion)) shakesUsed++;
+        if(portion.group) usedGroups.add(portion.group);
         dailyRemaining.cal -= portion.kcal;
         dailyRemaining.c -= portion.c;
         dailyRemaining.f -= portion.f;
-      } else {
-        console.log('Fallback portion rejected:', portion, dailyRemaining);
       }
-    } else {
-      console.log('No viable foods for fallback');
     }
   }
 
@@ -252,51 +306,59 @@ function buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes
 }
 
 // ---------------------------
-// tryBuildDay now supports seededLocked structure
+// tryBuildDay now supports seededLocked structure:
+// seededLocked: { mealsByIndex: { mi: [items...] }, itemsByUid: { uid: { item, mi } } }
+// When a meal index has pre-placed items, buildMeal will honor them and skip selection for that meal.
 function tryBuildDay(mealCount, targets, maxShakes, maxRepeats, seededLocked = {}, maxAttempts = 1200) {
   const calMin = targets.calMin, calMax = targets.calMax;
   const cMax = targets.cMax, fMax = targets.fMax, pMin = targets.pMin;
+
   let bestWithinCaps = null;
   let bestWithinCapsProtein = -Infinity;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    console.log('tryBuildDay attempt', attempt + 1);
-
+  for(let attempt = 0; attempt < maxAttempts; attempt++){
     const foodCounts = {};
     let shakesUsed = 0;
     const dailyRemaining = { cal: calMax, c: cMax, f: fMax };
+
     const meals = [];
     let failed = false;
 
-    for (let mi = 0; mi < mealCount; mi++) {
+    for(let mi = 0; mi < mealCount; mi++){
       const remainingMeals = mealCount - mi;
       const perMealMax = {
         cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-        p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / mealCount) : 0,
+        p: (targets.pMax && targets.pMax>0) ? (targets.pMax / mealCount) : 0,
         c: Math.max(0.1, dailyRemaining.c / remainingMeals),
         f: Math.max(0.1, dailyRemaining.f / remainingMeals)
       };
 
+      // check if we have locked/preplaced items for this meal index
       const prePlaced = (seededLocked && seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi]) ? seededLocked.mealsByIndex[mi] : [];
+
+      // Add their counts to foodCounts/shakesUsed and reduce dailyRemaining BEFORE calling buildMeal
+      // However buildMeal handles prePlaced itself, so just pass prePlaced to it.
       const preferredTags = foodsForMealIndex(mi, mealCount) || [];
 
       const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes, error } =
         buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
 
-      if (error || !mealItems || mealItems.length === 0) {
-        console.log('Failed meal index', mi, 'error', error, 'prePlaced', prePlaced);
+      if(error || !mealItems || mealItems.length === 0){
         failed = true;
         break;
       }
 
-      for (const k in newCounts) foodCounts[k] = newCounts[k];
+      // merge counts
+      for(const k in newCounts) foodCounts[k] = newCounts[k];
       shakesUsed = newShakes;
 
+      // subtract from dailyRemaining already done inside buildMeal through reference mutation
       meals.push({ items: mealItems });
     }
 
-    if (failed) continue;
+    if(failed) continue;
 
+    // compute totals
     const totals = meals.reduce((acc, meal) => {
       const mcal = meal.items.reduce((s, f) => s + (f.kcal || 0), 0);
       const mp = meal.items.reduce((s, f) => s + (f.p || 0), 0);
@@ -305,20 +367,23 @@ function tryBuildDay(mealCount, targets, maxShakes, maxRepeats, seededLocked = {
       return { cal: acc.cal + mcal, p: acc.p + mp, c: acc.c + mc, f: acc.f + mf };
     }, { cal: 0, p: 0, c: 0, f: 0 });
 
-    if (totals.cal <= calMax && totals.c <= cMax && totals.f <= fMax) {
-      if (totals.cal >= calMin && totals.p >= pMin && totals.c >= targets.cMin && totals.f >= targets.fMin) {
+    // Validate caps: MUST NOT exceed calMax, cMax, fMax
+    if(totals.cal <= calMax && totals.c <= cMax && totals.f <= fMax){
+      if(totals.cal >= calMin && totals.p >= pMin && totals.c >= targets.cMin && totals.f >= targets.fMin){
         return { meals, totals, mealCount };
       }
-      if (totals.p > bestWithinCapsProtein) {
+      if(totals.p > bestWithinCapsProtein){
         bestWithinCapsProtein = totals.p;
         bestWithinCaps = { meals, totals, mealCount };
       }
     }
+    // else discard attempt
   }
 
-  if (bestWithinCaps) return bestWithinCaps;
+  if(bestWithinCaps) return bestWithinCaps;
   return null;
 }
+
 // ---------------------------
 // Render + UI wiring (drags, locks, regen). Ensures each meal & item has _uid for stability.
 function renderResult(plan) {
@@ -744,46 +809,24 @@ function generate(){
   // Build seededLocked structure from LOCKS and the previous plan (if any)
   const seededLocked = { mealsByIndex: {}, itemsByUid: {} };
   const prevPlan = window._lastPlan && window._lastPlan.plan;
-  if (prevPlan) {
+  if(prevPlan) {
+    // fill seededLocked.mealsByIndex for locked meals
     prevPlan.meals.forEach((meal, mi) => {
-      // ensure meal UID
-      const mealUid = meal._uid || uid('m');
-  
-      // if entire meal is locked
-      if (mealUid && LOCKS.meals[mealUid]) {
+      if(meal._uid && LOCKS.meals[meal._uid]) {
+        // clone items to freeze them
         seededLocked.mealsByIndex[mi] = meal.items.map(it => ({ ...it }));
+      } else {
+        // individual item locks: for each item locked, place into seededLocked.mealsByIndex[mi]
         meal.items.forEach(it => {
-          seededLocked.itemsByUid[it._uid] = { item: it, mi };
+          if(it._uid && LOCKS.foods[it._uid]) {
+            if(!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
+            seededLocked.mealsByIndex[mi].push({ ...it });
+            seededLocked.itemsByUid[it._uid] = { item: { ...it }, mi };
+          }
         });
       }
-
-      // also handle individual locked foods
-      meal.items.forEach(it => {
-        if (LOCKS.foods[it._uid]) {
-          seededLocked.itemsByUid[it._uid] = { item: it, mi };
-          if (!seededLocked.mealsByIndex[mi]) seededLocked.mealsByIndex[mi] = [];
-          if (!seededLocked.mealsByIndex[mi].some(x => x._uid === it._uid)) {
-            seededLocked.mealsByIndex[mi].push(it);
-          }
-        }
-      });
     });
   }
-
-  let plan = null;
-  for (const count of mealCounts) {
-    plan = tryBuildDay(count, targets, maxShakes, maxRepeats, seededLocked);
-    if (plan) break;
-  }
-
-  if (!plan) {
-    document.getElementById('result').innerHTML = `<div class="card warn"><strong>Failed to generate a plan. Try adjusting targets.</strong></div>`;
-    return;
-  }
-
-  window._lastPlan = plan;
-  renderResult(plan);
-}
 
   for (const m of mealCounts) {
     // important: ensure meal order is re-generated (new random snack slots) each try
@@ -809,133 +852,103 @@ function generate(){
     }
   }
 
-// if we reach here, try relaxed candidate selection like before (penalty-based)
-// We'll attempt multiple random candidates while honoring seededLocked and pick least-penalty.
-let best = null;
-let bestPenalty = Infinity;
-const relaxedAttempts = 1500;
+  // if we reach here, try relaxed candidate selection like before (penalty-based)
+  // We'll attempt multiple random candidates while honoring seededLocked and pick least-penalty.
+  let best = null;
+  let bestPenalty = Infinity;
+  const relaxedAttempts = 1500;
 
-for (const m of mealCounts) {
-  window._mealOrder = buildMealOrder(m);
-
-  for (let a = 0; a < relaxedAttempts; a++) {
-    // single-pass builder that accepts slight overshoot
-    const foodCounts = {};
-    let shakesUsed = 0;
-    let dailyRemaining = { cal: targets.calMax, c: targets.cMax, f: targets.fMax };
-    const meals = [];
-    let failed = false;
-
-    for (let mi = 0; mi < m; mi++) {
-      const remainingMeals = m - mi;
-      const perMealMax = {
-        cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-        p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / Math.max(1, mealCount)) : targets.pMin || 0
-        c: Math.max(0.1, dailyRemaining.c / remainingMeals),
-        f: Math.max(0.1, dailyRemaining.f / remainingMeals)
-      };
-
-      const preferredTags = foodsForMealIndex(mi, m) || [];
-      const prePlaced = (seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi])
-        ? seededLocked.mealsByIndex[mi]
-        : [];
-
-      const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
-        buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
-
-      if (!mealItems || mealItems.length === 0) {
-        failed = true;
-        break;
+  for (const m of mealCounts) {
+    window._mealOrder = buildMealOrder(m);
+    for(let a = 0; a < relaxedAttempts; a++){
+      // single-pass builder that accepts slight overshoot
+      const foodCounts = {};
+      let shakesUsed = 0;
+      let dailyRemaining = { cal: targets.calMax, c: targets.cMax, f: targets.fMax };
+      const meals = [];
+      let failed = false;
+      for(let mi = 0; mi < m; mi++){
+        const remainingMeals = m - mi;
+        const perMealMax = {
+          cal: Math.max(1, dailyRemaining.cal / remainingMeals),
+          p: (targets.pMax && targets.pMax>0) ? (targets.pMax / m) : 0,
+          c: Math.max(0.1, dailyRemaining.c / remainingMeals),
+          f: Math.max(0.1, dailyRemaining.f / remainingMeals)
+        };
+        const preferredTags = foodsForMealIndex(mi, m) || [];
+        const prePlaced = (seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi]) ? seededLocked.mealsByIndex[mi] : [];
+        const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes } =
+          buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
+        if(!mealItems || mealItems.length === 0){ failed = true; break; }
+        // merge
+        for(const k in newCounts) foodCounts[k] = newCounts[k];
+        shakesUsed = newShakes;
+        meals.push({ items: mealItems });
       }
+      if(failed) continue;
 
-      // merge
-      for (const k in newCounts) foodCounts[k] = newCounts[k];
-      shakesUsed = newShakes;
-      meals.push({ items: mealItems });
-    }
-
-    if (failed) continue;
-
-    const totals = computeTotals({ meals });
-    // penalty
-    const overCal = Math.max(0, totals.cal - targets.calMax);
-    const overC = Math.max(0, totals.c - targets.cMax);
-    const overF = Math.max(0, totals.f - targets.fMax);
-    const missCal = Math.max(0, targets.calMin - totals.cal);
-    const missP = Math.max(0, targets.pMin - totals.p);
-    const penalty = overCal * 50 + overC * 40 + overF * 40 + missCal * 5 + missP * 10;
-
-    if (penalty < bestPenalty) {
-      bestPenalty = penalty;
-      best = { meals, totals, mealCount: m };
+      const totals = computeTotals({ meals });
+      // penalty
+      const overCal = Math.max(0, totals.cal - targets.calMax);
+      const overC = Math.max(0, totals.c - targets.cMax);
+      const overF = Math.max(0, totals.f - targets.fMax);
+      const missCal = Math.max(0, targets.calMin - totals.cal);
+      const missP = Math.max(0, targets.pMin - totals.p);
+      const penalty = overCal*50 + overC*40 + overF*40 + missCal*5 + missP*10;
+      if(penalty < bestPenalty){
+        bestPenalty = penalty;
+        best = { meals, totals, mealCount: m };
+      }
     }
   }
-}
 
-if (best) {
-  // ensure UIDs for meals and items
-  best.meals = best.meals.map(m => ({
-    _uid: m._uid || uid('m'),
-    items: m.items.map(it => ({
-      ...it,
-      _uid: it._uid || uid('i')
-    }))
-  }));
-  renderResult(best);
-  return;
-}
+  if(best){
+    // ensure uids
+    best.meals = best.meals.map(m => ({ _uid: uid('m'), items: m.items.map(it => it._uid?it:{...it,_uid:uid('i')}) }));
+    renderResult(best);
+    return;
+  }
 
-// process seeded locked items
-mealCounts.forEach((meal, mi) => {
-  if (!meal || !meal.items) return;
-
-  meal.items.forEach(it => {
-    if (it && it._uid && LOCKS.foods[it._uid]) {
-      seededLocked.mealsByIndex[mi] = seededLocked.mealsByIndex[mi] || [];
-      seededLocked.mealsByIndex[mi].push({ ...it });
-    }
-  });
-});
-
-let result = null;
-for (const mc of mealCounts) {
-  result = tryBuildDay(mc, targets, maxShakes, maxRepeats, seededLocked, MAX_TRIES_PER_MEALCOUNT);
-  if (result) break;
-}
-
-if (result) {
-  renderResult(result);
-} else {
-  document.getElementById('result').innerHTML = `
-    <div class="card warn">
-      <strong>Failed to generate a valid day with the current constraints.</strong>
-    </div>`;
+  document.getElementById('result').innerHTML = `<div class="card warn"><strong>Could not generate a plan — try widening your ranges or increasing shakes/repeats.</strong></div>`;
 }
 
 // ---------------------------
-// CSV Export
-function exportCSV(plan){
-  if(!plan) return;
-  let csv = 'Meal,Food,Qty,kcal,Protein,Carbs,Fat\n';
-  plan.meals.forEach((meal, mi) => {
+// CSV export (keeps previous behaviour)
+function exportCSV() {
+  if (!window._lastPlan) {
+    alert('Generate a plan first');
+    return;
+  }
+  const rows = [['Meal','Food','Qty','Calories','Protein(g)','Carbs(g)','Fat(g)']];
+  window._lastPlan.plan.meals.forEach((meal, mi) => {
     meal.items.forEach(it => {
-      csv += `${mi+1},${it.name},${it.qty || 1},${it.kcal.toFixed(0)},${it.p.toFixed(1)},${it.c.toFixed(1)},${it.f.toFixed(1)}\n`;
+      rows.push([
+        `Meal ${mi + 1}`,
+        it.label || it.name,
+        it.qty || 1,
+        (it.kcal || 0).toFixed(0),
+        (it.p || 0).toFixed(1),
+        (it.c || 0).toFixed(1),
+        (it.f || 0).toFixed(1)
+      ]);
     });
   });
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  rows.push([
+    'TOTAL','', '',
+    window._lastPlan.totals.cal.toFixed(0),
+    window._lastPlan.totals.p.toFixed(1),
+    window._lastPlan.totals.c.toFixed(1),
+    window._lastPlan.totals.f.toFixed(1)
+  ]);
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `meal_plan.csv`;
+  a.download = 'mealplan.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
-
-// ---------------------------
-// Initial wiring
-document.getElementById('generateBtn').addEventListener('click', generate);
-document.getElementById('exportCsvBtn').addEventListener('click', () => exportCSV(window._lastPlan.plan));
-window.addEventListener('load', loadFoods);
 
 // ---------------------------
 // Small helper: quick demo generate (keeps same API but tries to use real generator)
