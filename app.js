@@ -612,67 +612,76 @@ function onLockToggle(e) {
 }
 
 // ---------------------------
-// Regen handler (meal branch fix)
-if(type === 'meal') {
-  const mi = Number(btn.dataset.mi);
-  const mealBlock = document.querySelector(`#result .meal-block[data-mi="${mi}"]`);
-  if(!mealBlock) return;
-  const mealUid = mealBlock.dataset.mealUid;
-  if(LOCKS.meals[mealUid]) return; // whole meal is locked
+// Regen handler (food or meal)
+async function onRegenClicked(e) {
+  const btn = e.currentTarget;
+  const type = btn.dataset.type;
+  btn.classList.add('active'); // full opacity via CSS .active
+  setTimeout(() => btn.classList.remove('active'), 300);
 
-  const targets = collectTargetsFromUI();
-  const maxShakes = Number(document.getElementById('maxShakes').value || 0);
-  const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
+  const plan = window._lastPlan.plan;
+  if(!plan) return;
 
-  // Current totals without this meal
-  const currentTotals = computeTotals(plan);
-  const mealTotals = plan.meals[mi].items.reduce((acc, it) => {
-    acc.cal += it.kcal || 0;
-    acc.c   += it.c || 0;
-    acc.f   += it.f || 0;
-    return acc;
-  }, { cal:0, c:0, f:0 });
+  const maxAttempts = 250;
 
-  const dailyRemaining = {
-    cal: Math.max(0, targets.calMax - (currentTotals.cal - mealTotals.cal)),
-    c:   Math.max(0, targets.cMax   - (currentTotals.c   - mealTotals.c)),
-    f:   Math.max(0, targets.fMax   - (currentTotals.f   - mealTotals.f)),
-  };
+  if(type === 'food') {
+    const itemUid = btn.dataset.itemUid;
+    // locked? respect locks
+    if(LOCKS.foods[itemUid]) return;
+    // find the item location
+    const loc = findItemLocationByUid(itemUid);
+    if(!loc) return;
+    const { mi, fi } = loc;
 
-  // --- FIX: collect locked foods inside this meal ---
-  const lockedItems = plan.meals[mi].items.filter(it => LOCKS.foods[it._uid]);
+    // compute current totals and dailyRemaining from targets in UI
+    const targets = collectTargetsFromUI();
+    const maxShakes = Number(document.getElementById('maxShakes').value || 0);
+    const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
 
-  // regenerate unlocked part of meal
-  const perMealMax = {
-    cal: Math.max(1, dailyRemaining.cal / (plan.mealCount - mi)),
-    p:   (targets.pMax && targets.pMax > 0) ? (targets.pMax / plan.mealCount) : 0,
-    c:   Math.max(0.1, dailyRemaining.c / (plan.mealCount - mi)),
-    f:   Math.max(0.1, dailyRemaining.f / (plan.mealCount - mi))
-  };
-  const preferredTags = foodsForMealIndex(mi, plan.mealCount);
+    // compute current totals to know dailyRemaining caps
+    const currentTotals = computeTotals(plan);
+    const dailyRemaining = {
+      cal: Math.max(0, targets.calMax - (currentTotals.cal - (plan.meals[mi].items[fi].kcal || 0))),
+      c: Math.max(0, targets.cMax - (currentTotals.c - (plan.meals[mi].items[fi].c || 0))),
+      f: Math.max(0, targets.fMax - (currentTotals.f - (plan.meals[mi].items[fi].f || 0)))
+    };
 
-  const { mealItems } = buildMeal(
-    perMealMax,
-    dailyRemaining,
-    {}, // you might want to pass in actual foodCounts/shakesUsed for stricter control
-    0,
-    maxShakes,
-    maxRepeats,
-    preferredTags,
-    3,
-    lockedItems // <-- prePlaced items
-  );
+    // prefer foods matching meal tag
+    const slotTags = foodsForMealIndex(mi, plan.mealCount) || [];
+    let replaced = false;
+    for(let attempt = 0; attempt < maxAttempts && !replaced; attempt++){
+      const candidateBase = sample(FOODS.filter(f => {
+        // prefer allowed tags
+        if(!Array.isArray(f.tags) || !f.tags.some(t => slotTags.includes(t))) return false;
+        // shakes limit
+        const shakesNow = countShakesInPlan(plan);
+        if(isShake(f) && shakesNow >= maxShakes) return false;
+        return true;
+      }));
+      if(!candidateBase) break;
+      const candidate = pickPortion(candidateBase);
+      // check if replacement fits within dailyRemaining and perMeal softMax (approx)
+      if(candidate.kcal <= dailyRemaining.cal && candidate.c <= dailyRemaining.c && candidate.f <= dailyRemaining.f) {
+        // apply
+        plan.meals[mi].items[fi] = candidate;
+        replaced = true;
+      }
+    }
+    // if not replaced with strict tag preference, try fallback to any food
+    if(!replaced){
+      for(let attempt = 0; attempt < maxAttempts && !replaced; attempt++){
+        const candidateBase = sample(FOODS);
+        const candidate = pickPortion(candidateBase);
+        if(candidate.kcal <= dailyRemaining.cal && candidate.c <= dailyRemaining.c && candidate.f <= dailyRemaining.f){
+          plan.meals[mi].items[fi] = candidate;
+          replaced = true;
+        }
+      }
+    }
 
-  // keep the locked ones + regenerated ones (but avoid double)
-  const finalItems = [...lockedItems];
-  mealItems.forEach(it => {
-    if(!LOCKS.foods[it._uid]) finalItems.push(it);
-  });
-
-  plan.meals[mi].items = finalItems;
-  renderResult(plan);
-  return;
-}
+    renderResult(plan);
+    return;
+  }
 
   // type === 'meal'
   if(type === 'meal') {
