@@ -59,9 +59,9 @@
       <input id="maxRepeats" type="number" value="1" />
     </div>
 
-    <div style="min-width:200px">
-      <button onclick="generate()">Generate Day</button>
-      <button onclick="exportCSV()" style="background:#2563eb;margin-left:8px">Export CSV</button>
+    <div style="min-width:200px; margin-top:8px">
+      <button id="generateBtn">Generate Day</button>
+      <button id="exportBtn" style="background:#2563eb;margin-left:8px">Export CSV</button>
     </div>
   </div>
 
@@ -76,9 +76,17 @@
   <!-- Scripts -->
   <script src="app.js"></script>
   <script>
-    // Load foods.json once app.js is ready
     window.addEventListener("DOMContentLoaded", () => {
       loadFoods();
+
+      // Button bindings
+      document.getElementById("generateBtn").addEventListener("click", () => {
+        generate();
+      });
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        exportCSV();
+      });
     });
   </script>
 </body>
