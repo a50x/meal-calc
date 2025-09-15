@@ -1,3 +1,4 @@
+// foods.js — load foods.json
 import { slugify } from './utils.js';
 
 export let FOODS = [];
@@ -52,11 +53,10 @@ export async function loadFoods() {
       return true;
     });
 
-    document.getElementById('result').innerHTML =
-      `<div class="card info"><strong>Foods loaded.</strong></div>`;
+    console.log('Foods loaded:', FOODS.length);
+    return FOODS;
   } catch (err) {
     console.error('Failed loading foods.json', err);
-    document.getElementById('result').innerHTML =
-      `<div class="card warn"><strong>Error loading foods.json</strong><br>${String(err)}</div>`;
+    throw err;
   }
 }
