@@ -1,27 +1,42 @@
-// main.js — Entry point
+import { loadFoods } from './foods.js';
+import { tryBuildDay } from './planner.js';
+import { UI } from './ui.js';
 
-import { Planner } from "./planner.js";
-import { UI } from "./ui.js";
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await loadFoods();
 
-async function init() {
-  const response = await fetch("foods.json");
-  const foods = await response.json();
+    const ui = new UI({ meals: {} }); // temporary empty
+    ui.setupCSVExport();
 
-  const dailyTargets = { calories: 2500, protein: 185, carbs: 220, fat: 65 };
+    document.getElementById('generateBtn').addEventListener('click', () => {
+      const targets = {
+        calMin: Number(document.getElementById('calTarget').value) - Number(document.getElementById('calRange').value),
+        calMax: Number(document.getElementById('calTarget').value) + Number(document.getElementById('calRange').value),
+        pMin: Number(document.getElementById('pTarget').value) - Number(document.getElementById('pRange').value),
+        pMax: Number(document.getElementById('pTarget').value) + Number(document.getElementById('pRange').value),
+        cMin: Number(document.getElementById('cTarget').value) - Number(document.getElementById('cRange').value),
+        cMax: Number(document.getElementById('cTarget').value) + Number(document.getElementById('cRange').value),
+        fMin: Number(document.getElementById('fTarget').value) - Number(document.getElementById('fRange').value),
+        fMax: Number(document.getElementById('fTarget').value) + Number(document.getElementById('fRange').value)
+      };
 
-  const planner = new Planner(foods, dailyTargets);
-  planner.generateMeals();
+      const mealCount = document.getElementById('mealCount').value === 'optimal'
+        ? 3 + Math.floor(Math.random() * 3)
+        : Number(document.getElementById('mealCount').value);
 
-  const ui = new UI(planner);
-  ui.renderMeals();
-  ui.setupMealLockButtons();
-  ui.setupCSVExport();
+      const plan = tryBuildDay(mealCount, targets);
 
-  // Regenerate button
-  document.getElementById("regenerate").addEventListener("click", () => {
-    planner.generateMeals();
-    ui.renderMeals();
-  });
-}
-
-init();
+      if (plan) {
+        ui.planner.meals = plan;
+        ui.renderMeals();
+      } else {
+        document.getElementById('result').innerHTML =
+          `<div class="card warn"><strong>No valid plan generated.</strong></div>`;
+      }
+    });
+  } catch (err) {
+    document.getElementById('result').innerHTML =
+      `<div class="card warn"><strong>Error loading foods.json:</strong><br>${err}</div>`;
+  }
+});
