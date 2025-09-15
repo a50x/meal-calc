@@ -4,7 +4,7 @@ import { uid, rand, sample, isShake } from './utils.js';
 export function pickPortion(food) {
   if (!food) return null;
   const base = { ...food };
-  let qty = base.portionable ? rand(base.min, base.max) : 1;
+  let qty = base.portion_scalable ? rand(base.min || 1, base.max || 1) : 1;
   return {
     ...base,
     _uid: uid('i'),
@@ -13,7 +13,7 @@ export function pickPortion(food) {
     p: Number(base.p || 0) * qty,
     c: Number(base.c || 0) * qty,
     f: Number(base.f || 0) * qty,
-    label: base.portionable
+    label: base.portion_scalable
       ? `${base.name} x${qty}${base.unit ? ' ' + base.unit + (qty > 1 ? 's' : '') : ''}`
       : base.name
   };
