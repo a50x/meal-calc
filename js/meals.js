@@ -19,7 +19,6 @@ export function pickPortion(food) {
   };
 }
 
-// Build valid meal sequence (with snacks)
 export function buildMealOrder(totalMeals) {
   const base = ['breakfast', 'lunch', 'dinner'];
   let snacksToInsert = totalMeals === 4 ? rand(1, 2) : totalMeals === 5 ? rand(2, 3) : 0;
