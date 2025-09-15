@@ -1,4 +1,4 @@
-import { FOODS } from './foods.js';
+import { FOODS } from '../foods.js';
 import { pickPortion } from './meals.js';
 
 export class Planner {
@@ -23,6 +23,7 @@ export class Planner {
   }
 
   buildMealOrder(totalMeals) {
+    // Simple round-robin approach
     return [...Array(totalMeals).keys()].map(i => {
       const arr = ['breakfast', 'lunch', 'dinner', 'snack'];
       return arr[i % arr.length];
@@ -30,7 +31,9 @@ export class Planner {
   }
 
   generateMeal(mealType) {
-    const available = this.foods.filter(f => f.tags.includes(mealType) || f.tags.length === 0);
+    const available = this.foods.filter(
+      f => f.tags.includes(mealType) || f.tags.length === 0
+    );
     const picks = [];
 
     for (let i = 0; i < 3 && available.length; i++) {
