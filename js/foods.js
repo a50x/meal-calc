@@ -11,16 +11,19 @@ export async function loadFoods() {
     function normalizeEntry(entry) {
       const name = entry.name || entry.id || (entry.label || '').toString();
       const id = entry.id || slugify(name);
-      const kcal = Number(entry.kcal ?? entry.cal ?? 0);
-      const p = Number(entry.p ?? entry.protein ?? 0);
-      const c = Number(entry.c ?? entry.carbs ?? 0);
-      const f = Number(entry.f ?? entry.fat ?? 0);
-      const tags = Array.isArray(entry.tags) ? entry.tags.slice() : [];
-      const portionable = !!(entry.portionable || (entry.min !== undefined && entry.max !== undefined));
-      const min = portionable ? Math.max(1, Number(entry.min ?? 1)) : 1;
-      const max = portionable ? Math.max(min, Number(entry.max ?? min)) : 1;
-      const unit = entry.unit || '';
-      return { id, name, kcal, p, c, f, tags, portionable, min, max, unit };
+      return {
+        id,
+        name,
+        kcal: Number(entry.kcal ?? entry.cal ?? 0),
+        p: Number(entry.p ?? entry.protein ?? 0),
+        c: Number(entry.c ?? entry.carbs ?? 0),
+        f: Number(entry.f ?? entry.fat ?? 0),
+        tags: Array.isArray(entry.tags) ? entry.tags.slice() : [],
+        portionable: !!(entry.portionable || (entry.min !== undefined && entry.max !== undefined)),
+        min: Math.max(1, Number(entry.min ?? 1)),
+        max: Math.max(Number(entry.min ?? 1), Number(entry.max ?? entry.min ?? 1)),
+        unit: entry.unit || ''
+      };
     }
 
     if (Array.isArray(raw)) {
@@ -28,11 +31,11 @@ export async function loadFoods() {
     } else if (raw && typeof raw === 'object') {
       for (const key of Object.keys(raw)) {
         const val = raw[key];
-        if (Array.isArray(val)) for (const it of val) list.push(normalizeEntry(it));
-        else if (val && typeof val === 'object') {
+        if (Array.isArray(val)) {
+          for (const it of val) list.push(normalizeEntry(it));
+        } else if (val && typeof val === 'object') {
           for (const [name, metrics] of Object.entries(val)) {
-            const entry = Object.assign({}, metrics);
-            if (!entry.name) entry.name = name;
+            const entry = { ...metrics, name };
             list.push(normalizeEntry(entry));
           }
         }
@@ -42,14 +45,12 @@ export async function loadFoods() {
     if (!list.length) throw new Error('No foods found in foods.json');
 
     const seen = new Set();
-    FOODS = [];
-    for (const item of list) {
+    FOODS = list.filter(item => {
       if (!item.id) item.id = slugify(item.name);
-      if (seen.has(item.id)) continue;
+      if (seen.has(item.id)) return false;
       seen.add(item.id);
-      FOODS.push(item);
-    }
-    FOODS = FOODS.map(f => ({ ...f, tags: f.tags || [] }));
+      return true;
+    });
 
     document.getElementById('result').innerHTML =
       `<div class="card info"><strong>Foods loaded.</strong></div>`;
