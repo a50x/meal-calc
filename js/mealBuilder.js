@@ -26,8 +26,18 @@ function buildMeal(options = {}) {
 
 // ---------------------------
 // Build a whole day
-export function tryBuildDay(options = {}) {
-  const mealCount = options.mealCount || 4;
+export function tryBuildDay(arg1, arg2, arg3, arg4) {
+  let mealCount, options;
+  if (typeof arg1 === "object") {
+    // called like tryBuildDay({ mealCount, targets, ... })
+    options = arg1;
+    mealCount = options.mealCount || 4;
+  } else {
+    // called like tryBuildDay(mealCount, targets, maxShakes, maxRepeats)
+    mealCount = arg1 || 4;
+    options = { mealCount, targets: arg2, maxShakes: arg3, maxRepeats: arg4 };
+  }
+
   const plan = { mealCount, meals: [] };
 
   for (let i = 0; i < mealCount; i++) {
