@@ -1,66 +1,38 @@
 // mealBuilder.js
-import { getFoods, pickPortion, sample, isShake } from "./foods.js";
+import { getFoods, pickPortion, sample } from "./foods.js";
 
-// ---------------------------
-// Meal sequencing helpers
-export function buildMealOrder(mealCount) {
-  if (mealCount === "optimal") {
-    const options = [3, 4, 5];
-    mealCount = options[Math.floor(Math.random() * options.length)];
-  }
-  return Array.from({ length: mealCount }, (_, i) => i);
-}
-
-export function foodsForMealIndex(mi, mealCount) {
-  if (mealCount === 3) {
-    if (mi === 0) return ["breakfast"];
-    if (mi === 1) return ["lunch"];
-    if (mi === 2) return ["dinner"];
-  }
-  if (mealCount === 4) {
-    if (mi === 0) return ["breakfast"];
-    if (mi === 1) return ["lunch"];
-    if (mi === 2) return ["snack"];
-    if (mi === 3) return ["dinner"];
-  }
-  if (mealCount === 5) {
-    if (mi === 0) return ["breakfast"];
-    if (mi === 1) return ["lunch"];
-    if (mi === 2) return ["snack"];
-    if (mi === 3) return ["dinner"];
-    if (mi === 4) return ["snack"];
-  }
-  return [];
+let UID_COUNTER = 1;
+function uid() {
+  return "f" + UID_COUNTER++;
 }
 
 // ---------------------------
 // Build a single meal
-export function buildMeal(
-  perMealMax,
-  remaining,
-  foodCounts,
-  shakesUsed,
-  maxShakes,
-  maxRepeats,
-  preferredTags,
-  maxItems = 3,
-  preplacedItems = []
-) {
-  const FOODS = getFoods();
-  const mealItems = [...preplacedItems];
+function buildMeal(options = {}) {
+  const foods = getFoods();
+  const count = options.count || 2 + Math.floor(Math.random() * 2); // 2–3 items
+  const meal = { items: [] };
 
-  for (let attempt = 0; attempt < 50 && mealItems.length < maxItems; attempt++) {
-    const candidateBase = sample(
-      FOODS.filter((f) => {
-        if (maxRepeats > 0 && foodCounts[f.id] >= maxRepeats) return false;
-        if (isShake(f) && shakesUsed >= maxShakes) return false;
-        if (
-          preferredTags.length &&
-          (!Array.isArray(f.tags) || !f.tags.some((t) => preferredTags.includes(t)))
-        )
-          return false;
-        return true;
-      })
-    );
-    if (!candidateBase) break;
-    const candidate = pickP
+  for (let i = 0; i < count; i++) {
+    const f = pickPortion(sample(foods));
+    if (f) {
+      f._uid = uid();
+      f.label = `${f.name} ${f.qty}${f.unit || ""}`;
+      meal.items.push(f);
+    }
+  }
+  return meal;
+}
+
+// ---------------------------
+// Build a whole day
+export function tryBuildDay(options = {}) {
+  const mealCount = options.mealCount || 4;
+  const plan = { mealCount, meals: [] };
+
+  for (let i = 0; i < mealCount; i++) {
+    plan.meals.push(buildMeal({}));
+  }
+
+  return plan;
+}
