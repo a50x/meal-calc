@@ -1,11 +1,10 @@
-// foods.js — load foods.json
-import FOODS_JSON from '../foods.json' assert { type: 'json' };
-
-export const FOODS = FOODS_JSON;
+// js/foods.js — load foods.json dynamically
+export let FOODS = []; // will hold normalized foods
 
 export async function loadFoods() {
   try {
-    const res = await fetch('foods.json');
+    const res = await fetch('./foods.json'); // relative to index.html
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
     const list = [];
 
@@ -59,4 +58,13 @@ export async function loadFoods() {
     console.error('Failed loading foods.json', err);
     throw err;
   }
+}
+
+// helper
+function slugify(str) {
+  return (str || '').toString().toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\_+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
