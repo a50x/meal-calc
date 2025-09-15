@@ -1,12 +1,14 @@
-import { FOODS, loadFoods } from './js/foods.js'; // foods.json is in root, foods.js is in /js/
-import { Planner, tryBuildDay } from './js/planner.js';
+// main.js
+import { FOODS, loadFoods } from './js/foods.js'; // foods.json is in root, foods.js in /js/
+import { tryBuildDay } from './js/planner.js';
 import { bindUI } from './js/ui.js';
 import { pickPortion, buildMealOrder, foodsForMealIndex } from './js/meals.js';
 import { uid, rand, sample, isShake } from './js/utils.js';
 
 window.addEventListener("DOMContentLoaded", async () => {
   try {
-    await loadFoods?.(); // optional loader if FOODS need dynamic loading
+    // Load foods.json asynchronously
+    const foods = await loadFoods();
 
     // Initialize UI bindings
     bindUI();
@@ -29,16 +31,32 @@ window.addEventListener("DOMContentLoaded", async () => {
         ? 3 + Math.floor(Math.random() * 3)
         : Number(mealCountInput);
 
-      const plan = tryBuildDay(mealCount, targets);
+      // Generate meal plan using loaded foods
+      const plan = tryBuildDay(foods, mealCount, targets);
 
       if (plan) {
         // Render meals in UI
         for (const [mealType, foods] of Object.entries(plan)) {
           const el = document.getElementById(mealType);
           if (!el) continue;
-          el.innerHTML = foods.map(f => `<div>${f.label || f.name} (${f.kcal} kcal)</div>`).join('');
+          el.innerHTML = foods
+            .map(f => `<div>${f.label || f.name} (${f.kcal} kcal)</div>`)
+            .join('');
         }
-        window.currentPlanner = { meals: plan, exportCSV: () => '' }; // placeholder for export
+
+        // Store current plan for CSV export
+        window.currentPlanner = {
+          meals: plan,
+          exportCSV: () => {
+            let csv = "Meal,Food,Qty,Calories,Protein,Carbs,Fat\n";
+            for (const [meal, items] of Object.entries(plan)) {
+              for (const f of items) {
+                csv += `${meal},${f.name},${f.qty},${f.kcal},${f.p},${f.c},${f.f}\n`;
+              }
+            }
+            return csv;
+          }
+        };
       } else {
         document.getElementById('result').innerHTML =
           `<div class="card warn"><strong>No valid plan generated.</strong></div>`;
