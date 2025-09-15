@@ -1,5 +1,4 @@
 let UID_COUNTER = 1;
-
 export function uid(prefix = '') { return `${prefix || 'u'}${UID_COUNTER++}`; }
 export function slugify(str) {
   return (str || '').toString().toLowerCase()
@@ -8,6 +7,6 @@ export function slugify(str) {
     .replace(/\_+/g, '_')
     .replace(/^_+|_+$/g, '');
 }
-export function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-export function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-export function isShake(food) { return Array.isArray(food.tags) && food.tags.includes('shake'); }
+export const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+export const sample = arr => arr[Math.floor(Math.random() * arr.length)];
+export const isShake = food => Array.isArray(food.tags) && food.tags.includes('shake');
