@@ -1,14 +1,13 @@
-// planner.js — Meal planning logic
+import { rand, sample } from './utils.js';
 
 export class Planner {
   constructor(foods, dailyTargets) {
-    this.foods = foods; // loaded from foods.json
-    this.dailyTargets = dailyTargets; // macros/calories
+    this.foods = foods;
+    this.dailyTargets = dailyTargets;
     this.meals = { breakfast: [], lunch: [], dinner: [], snack: [] };
     this.locks = { foods: new Set(), meals: new Set() };
   }
 
-  // Generate all meals
   generateMeals() {
     for (const meal in this.meals) {
       if (!this.locks.meals.has(meal)) {
@@ -17,13 +16,13 @@ export class Planner {
     }
   }
 
-  // Generate one meal
   generateMeal(mealType) {
     const available = this.foods.filter(f => f.tags.includes(mealType));
     const picks = [];
+    if (!available.length) return picks;
 
     for (let i = 0; i < 3; i++) {
-      const food = available[Math.floor(Math.random() * available.length)];
+      const food = sample(available);
       if (this.locks.foods.has(food.name)) continue;
       const portion = this.scalePortion(food);
       picks.push({ ...food, qty: portion });
@@ -31,36 +30,36 @@ export class Planner {
     return picks;
   }
 
-  // Portion scaling if portionable
   scalePortion(food) {
     if (food.portionable) {
-      const amount = Math.floor(
-        Math.random() * (food.max - food.min + 1)
-      ) + food.min;
+      const amount = rand(food.min, food.max);
       return `${amount} ${food.unit}`;
     }
     return food.unit || "1 serving";
   }
 
-  // Lock/unlock a food
-  toggleFoodLock(foodName) {
-    if (this.locks.foods.has(foodName)) {
-      this.locks.foods.delete(foodName);
-    } else {
-      this.locks.foods.add(foodName);
-    }
+  toggleFoodLock(name) {
+    this.locks.foods.has(name) ? this.locks.foods.delete(name) : this.locks.foods.add(name);
   }
 
-  // Lock/unlock a meal
-  toggleMealLock(mealType) {
-    if (this.locks.meals.has(mealType)) {
-      this.locks.meals.delete(mealType);
-    } else {
-      this.locks.meals.add(mealType);
-    }
+  toggleMealLock(meal) {
+    this.locks.meals.has(meal) ? this.locks.meals.delete(meal) : this.locks.meals.add(meal);
   }
 
-  // Export meals to CSV
   exportCSV() {
     let csv = "Meal,Food,Qty,Calories,Protein,Carbs,Fat\n";
-    for (const [meal, foods] of Object.entries(thi
+    for (const [meal, foods] of Object.entries(this.meals)) {
+      foods.forEach(f => {
+        csv += `${meal},${f.name},${f.qty},${f.kcal},${f.p},${f.c},${f.f}\n`;
+      });
+    }
+    return csv;
+  }
+}
+
+export function tryBuildDay(mealCount = 4, targets = {}, maxShakes = 2, maxRepeats = 2) {
+  if (!window.FOODS || !FOODS.length) return null;
+  const planner = new Planner(window.FOODS, targets);
+  planner.generateMeals();
+  return planner;
+}
