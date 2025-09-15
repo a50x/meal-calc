@@ -1,65 +1,70 @@
-import { rand, sample } from './utils.js';
+import { FOODS } from './foods.js';
+import { pickPortion } from './meals.js';
 
 export class Planner {
-  constructor(foods, dailyTargets) {
-    this.foods = foods;
+  constructor(dailyTargets, maxShakes = 2, maxRepeats = 1) {
+    this.foods = FOODS;
     this.dailyTargets = dailyTargets;
+    this.maxShakes = maxShakes;
+    this.maxRepeats = maxRepeats;
     this.meals = { breakfast: [], lunch: [], dinner: [], snack: [] };
     this.locks = { foods: new Set(), meals: new Set() };
   }
 
-  generateMeals() {
-    for (const meal in this.meals) {
-      if (!this.locks.meals.has(meal)) {
-        this.meals[meal] = this.generateMeal(meal);
-      }
-    }
+  generateMeals(mealCount = 4) {
+    const order = this.buildMealOrder(mealCount);
+    this.meals = { breakfast: [], lunch: [], dinner: [], snack: [] };
+
+    order.forEach(mealType => {
+      this.meals[mealType] = this.generateMeal(mealType);
+    });
+
+    return this.meals;
+  }
+
+  buildMealOrder(totalMeals) {
+    return [...Array(totalMeals).keys()].map(i => {
+      const arr = ['breakfast', 'lunch', 'dinner', 'snack'];
+      return arr[i % arr.length];
+    });
   }
 
   generateMeal(mealType) {
-    const available = this.foods.filter(f => f.tags.includes(mealType));
+    const available = this.foods.filter(f => f.tags.includes(mealType) || f.tags.length === 0);
     const picks = [];
-    if (!available.length) return picks;
 
-    for (let i = 0; i < 3; i++) {
-      const food = sample(available);
+    for (let i = 0; i < 3 && available.length; i++) {
+      let food = available[Math.floor(Math.random() * available.length)];
       if (this.locks.foods.has(food.name)) continue;
-      const portion = this.scalePortion(food);
-      picks.push({ ...food, qty: portion });
+      picks.push(pickPortion(food));
     }
+
     return picks;
   }
 
-  scalePortion(food) {
-    if (food.portionable) {
-      const amount = rand(food.min, food.max);
-      return `${amount} ${food.unit}`;
-    }
-    return food.unit || "1 serving";
+  toggleFoodLock(foodName) {
+    if (this.locks.foods.has(foodName)) this.locks.foods.delete(foodName);
+    else this.locks.foods.add(foodName);
   }
 
-  toggleFoodLock(name) {
-    this.locks.foods.has(name) ? this.locks.foods.delete(name) : this.locks.foods.add(name);
-  }
-
-  toggleMealLock(meal) {
-    this.locks.meals.has(meal) ? this.locks.meals.delete(meal) : this.locks.meals.add(meal);
+  toggleMealLock(mealType) {
+    if (this.locks.meals.has(mealType)) this.locks.meals.delete(mealType);
+    else this.locks.meals.add(mealType);
   }
 
   exportCSV() {
     let csv = "Meal,Food,Qty,Calories,Protein,Carbs,Fat\n";
     for (const [meal, foods] of Object.entries(this.meals)) {
-      foods.forEach(f => {
+      for (const f of foods) {
         csv += `${meal},${f.name},${f.qty},${f.kcal},${f.p},${f.c},${f.f}\n`;
-      });
+      }
     }
     return csv;
   }
 }
 
-export function tryBuildDay(mealCount = 4, targets = {}, maxShakes = 2, maxRepeats = 2) {
-  if (!window.FOODS || !FOODS.length) return null;
-  const planner = new Planner(window.FOODS, targets);
-  planner.generateMeals();
-  return planner;
+// Helper for main.js
+export function tryBuildDay(mealCount, targets, maxShakes = 2, maxRepeats = 1) {
+  const planner = new Planner(targets, maxShakes, maxRepeats);
+  return planner.generateMeals(mealCount);
 }
