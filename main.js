@@ -1,6 +1,8 @@
-import { loadFoods } from './foods.js';
-import { tryBuildDay } from './planner.js';
-import { UI } from './ui.js';
+import { FOODS, loadFoods } from './foods.js'; // foods.json loader stays in root
+import { Planner, tryBuildDay } from './js/planner.js';
+import { UI } from './js/ui.js';
+import { pickPortion, buildMealOrder, foodsForMealIndex } from './js/meals.js';
+import { uid, rand, sample, isShake } from './js/utils.js';
 
 window.addEventListener("DOMContentLoaded", async () => {
   try {
