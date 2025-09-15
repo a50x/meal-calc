@@ -1,7 +1,7 @@
 // foods.js — load foods.json
-import { slugify } from './utils.js';
+import FOODS_JSON from '../foods.json' assert { type: 'json' };
 
-export let FOODS = [];
+export const FOODS = FOODS_JSON;
 
 export async function loadFoods() {
   try {
