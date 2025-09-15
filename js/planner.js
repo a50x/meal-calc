@@ -1,9 +1,9 @@
-// js/planner.js
+// planner.js — meal planning logic
 import { pickPortion } from './meals.js';
 
 export class Planner {
-  constructor(foods, dailyTargets, maxShakes = 2, maxRepeats = 1) {
-    this.foods = foods; // now passed in
+  constructor(dailyTargets, foods = [], maxShakes = 2, maxRepeats = 1) {
+    this.foods = Array.isArray(foods) ? foods : []; // ensure array
     this.dailyTargets = dailyTargets;
     this.maxShakes = maxShakes;
     this.maxRepeats = maxRepeats;
@@ -23,18 +23,17 @@ export class Planner {
   }
 
   buildMealOrder(totalMeals) {
-    return [...Array(totalMeals).keys()].map(i => {
-      const arr = ['breakfast', 'lunch', 'dinner', 'snack'];
-      return arr[i % arr.length];
-    });
+    const arr = ['breakfast', 'lunch', 'dinner', 'snack'];
+    return [...Array(totalMeals).keys()].map(i => arr[i % arr.length]);
   }
 
   generateMeal(mealType) {
+    if (!Array.isArray(this.foods)) return [];
     const available = this.foods.filter(
       f => f.tags.includes(mealType) || f.tags.length === 0
     );
-    const picks = [];
 
+    const picks = [];
     for (let i = 0; i < 3 && available.length; i++) {
       let food = available[Math.floor(Math.random() * available.length)];
       if (this.locks.foods.has(food.name)) continue;
@@ -65,8 +64,8 @@ export class Planner {
   }
 }
 
-// helper
-export function tryBuildDay(foods, mealCount, targets, maxShakes = 2, maxRepeats = 1) {
-  const planner = new Planner(foods, targets, maxShakes, maxRepeats);
+// Helper for main.js
+export function tryBuildDay(mealCount, targets, foods, maxShakes = 2, maxRepeats = 1) {
+  const planner = new Planner(targets, foods, maxShakes, maxRepeats);
   return planner.generateMeals(mealCount);
 }
