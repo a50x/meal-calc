@@ -1,4 +1,4 @@
-import { FOODS, loadFoods } from './foods.js'; // foods.json loader in root
+import { FOODS, loadFoods } from './js/foods.js'; // foods.json is in root, foods.js is in /js/
 import { Planner, tryBuildDay } from './js/planner.js';
 import { bindUI } from './js/ui.js';
 import { pickPortion, buildMealOrder, foodsForMealIndex } from './js/meals.js';
