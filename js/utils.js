@@ -1,5 +1,5 @@
-let UID_COUNTER = 1;
-export function uid(prefix = '') { return `${prefix || 'u'}${UID_COUNTER++}`; }
+// utils.js
+export function uid(prefix = '') { return `${prefix || 'u'}${Date.now()}`; }
 export function slugify(str) {
   return (str || '').toString().toLowerCase()
     .replace(/\s+/g, '_')
