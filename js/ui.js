@@ -1,5 +1,3 @@
-// ui.js — Handles DOM updates & interactivity
-
 export class UI {
   constructor(planner) {
     this.planner = planner;
@@ -21,7 +19,7 @@ export class UI {
         div.className = "food-item";
         div.draggable = true;
         div.innerHTML = `
-          <span>${food.name} (${food.qty})</span>
+          <span>${food.label} (${food.qty})</span>
           <button class="lock-btn" data-food="${food.name}">🔒</button>
         `;
         container.appendChild(div);
@@ -38,21 +36,9 @@ export class UI {
     }
   }
 
-  setupMealLockButtons() {
-    document.querySelectorAll(".meal-lock").forEach(btn => {
-      btn.addEventListener("click", e => {
-        const meal = e.target.dataset.meal;
-        this.planner.toggleMealLock(meal);
-        e.target.classList.toggle("locked");
-      });
-    });
-  }
-
-  setupCSVExport() {
-    document.getElementById("exportCSV").addEventListener("click", () => {
-      const blob = new Blob([this.planner.exportCSV()], {
-        type: "text/csv"
-      });
+  setupCSVExport(buttonId = 'exportBtn') {
+    document.getElementById(buttonId).addEventListener("click", () => {
+      const blob = new Blob([this.planner.exportCSV()], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
