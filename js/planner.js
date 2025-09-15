@@ -1,9 +1,9 @@
-import { FOODS } from './foods.js';
+// js/planner.js
 import { pickPortion } from './meals.js';
 
 export class Planner {
-  constructor(dailyTargets, maxShakes = 2, maxRepeats = 1) {
-    this.foods = FOODS;
+  constructor(foods, dailyTargets, maxShakes = 2, maxRepeats = 1) {
+    this.foods = foods; // now passed in
     this.dailyTargets = dailyTargets;
     this.maxShakes = maxShakes;
     this.maxRepeats = maxRepeats;
@@ -65,8 +65,8 @@ export class Planner {
   }
 }
 
-// Helper for main.js
-export function tryBuildDay(mealCount, targets, maxShakes = 2, maxRepeats = 1) {
-  const planner = new Planner(targets, maxShakes, maxRepeats);
+// helper
+export function tryBuildDay(foods, mealCount, targets, maxShakes = 2, maxRepeats = 1) {
+  const planner = new Planner(foods, targets, maxShakes, maxRepeats);
   return planner.generateMeals(mealCount);
 }
