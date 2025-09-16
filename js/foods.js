@@ -1,40 +1,39 @@
-// foods.js — handles foods data & utilities
+// foods.js — loading and portioning
 
-// --- Utilities ---
-function uid() {
-  return Math.random().toString(36).substring(2, 9);
-}
-function slugify(s) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-function rand(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-function clamp(val, min, max) {
-  return Math.max(min, Math.min(max, val));
-}
+let FOODS = [];
+let UID_COUNTER = 1;
+function uid(prefix) { return prefix + (UID_COUNTER++); }
+function slugify(str) { return str.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function isShake(food) { return food.tags && food.tags.includes('shake'); }
 
-// --- Food loading ---
+// Load foods.json
 async function loadFoods() {
-  const res = await fetch("foods.json");
-  const foods = await res.json();
+  const res = await fetch('foods.json');
+  const data = await res.json();
+  const seen = new Set();
 
-  // Normalize foods
-  return foods.map(f => ({
-    ...f,
-    id: f.id || uid(),
-    slug: slugify(f.name),
-  }));
+  FOODS = data.map(raw => {
+    const id = slugify(raw.name);
+    if (seen.has(id)) return null;
+    seen.add(id);
+    const entry = {
+      id, name: raw.name, tags: raw.tags || [],
+      kcal: raw.kcal, p: raw.p, c: raw.c, f: raw.f,
+      portionable: raw.portionable || false,
+      min: raw.min || 1, max: raw.max || 1, unit: raw.unit || ''
+    };
+    return entry;
+  }).filter(Boolean);
 }
 
-// --- Portion picker ---
+// Pick a portion of a food
 function pickPortion(food) {
-  if (!food.portionable) return { qty: 1, unit: food.unit || "" };
-
-  const min = food.min ?? 1;
-  const max = food.max ?? 1;
-  const qty = Math.floor(Math.random() * (max - min + 1)) + min;
-  return { qty, unit: food.unit || "" };
+  let qty = food.portionable ? rand(food.min, food.max) : 1;
+  return {
+    ...food, qty,
+    kcal: food.kcal * qty, p: food.p * qty, c: food.c * qty, f: food.f * qty,
+    _uid: uid('i')
+  };
 }
-
-export { uid, slugify, rand, clamp, loadFoods, pickPortion };
