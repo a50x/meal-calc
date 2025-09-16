@@ -349,114 +349,80 @@ function onLockToggle(e) {
 }
 
 // ------------------------------
-// Regen handler (food or meal)
+// Regen (lock-aware)
 function onRegenClicked(e) {
   const btn = e.currentTarget;
   const type = btn.dataset.type;
-  btn.classList.add('active');
-  setTimeout(() => btn.classList.remove('active'), 300);
-
   const plan = window._lastPlan;
   if (!plan) return;
 
-  const maxAttempts = 250;
-
-  if (type === 'food') {
+  if (type === "food") {
+    const { mi, fi } = btn.dataset;
     const itemUid = btn.dataset.itemUid;
+    // 🚫 skip if locked
     if (LOCKS.foods[itemUid]) return;
-    const loc = findItemLocationByUid(itemUid);
-    if (!loc) return;
-    const { mi, fi } = loc;
-    const targets = collectTargetsFromUI();
-    const maxShakes = Number(document.getElementById('maxShakes').value || 0);
-    const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
-    const currentTotals = computeTotals(plan);
-    // compute dailyRemaining excluding the replaced item
-    const oldItem = plan.meals[mi].items[fi];
-    const dailyRemaining = {
-      cal: Math.max(0, targets.calMax - (currentTotals.cal - (oldItem.kcal || 0))),
-      c: Math.max(0, targets.cMax - (currentTotals.c - (oldItem.c || 0))),
-      f: Math.max(0, targets.fMax - (currentTotals.f - (oldItem.f || 0)))
-    };
 
-    // prefer matching meal tag
-    const slotTags = foodsForMealIndex(mi, plan.mealCount) || [];
-    let replaced = false;
-    for (let attempt = 0; attempt < maxAttempts && !replaced; attempt++) {
-      const candidateBase = sample(FOODS.filter(f => {
-        if (!Array.isArray(f.tags) || !f.tags.some(t => slotTags.includes(t))) return false;
-        const shakesNow = countShakesInPlan(plan);
-        if (isShake(f) && shakesNow >= maxShakes) return false;
-        return true;
-      }));
-      if (!candidateBase) break;
-      const candidate = pickPortion(candidateBase);
-      if (candidate.kcal <= dailyRemaining.cal && candidate.c <= dailyRemaining.c && candidate.f <= dailyRemaining.f) {
-        plan.meals[mi].items[fi] = candidate;
-        replaced = true;
-      }
+    // replace food
+    const newFood = pickPortion(sample(window.FOODS));
+    if (newFood) {
+      newFood._uid = "i" + mi + "_" + fi;
+      plan.meals[mi].items[fi] = newFood;
     }
+    recalcMeal(plan.meals[mi]);
+    recalcTotals(plan);
+    renderResult(plan);
 
-    if (!replaced) {
-      for (let attempt = 0; attempt < maxAttempts && !replaced; attempt++) {
-        const candidateBase = sample(FOODS);
-        const candidate = pickPortion(candidateBase);
-        if (candidate.kcal <= dailyRemaining.cal && candidate.c <= dailyRemaining.c && candidate.f <= dailyRemaining.f) {
-          plan.meals[mi].items[fi] = candidate;
-          replaced = true;
-        }
+  } else if (type === "meal") {
+    const { mi } = btn.dataset;
+    const mealUid = btn.dataset.mealUid;
+    // 🚫 skip if locked
+    if (LOCKS.meals[mealUid]) return;
+
+    // rebuild this meal, but keep locked foods inside it
+    const oldMeal = plan.meals[mi];
+    const newMeal = tryBuildDay({ mealCount: 1 }).meals[0];
+
+    // replace only unlocked foods
+    const mergedItems = oldMeal.items.map((oldItem, fi) => {
+      if (LOCKS.foods[oldItem._uid]) {
+        return oldItem; // keep locked
+      } else {
+        return newMeal.items[fi % newMeal.items.length]; // pull from new pool
       }
-    }
+    });
+
+    newMeal._uid = mealUid;
+    newMeal.items = mergedItems;
+    plan.meals[mi] = newMeal;
 
     recalcMeal(plan.meals[mi]);
     recalcTotals(plan);
     renderResult(plan);
-    return;
-  }
 
-  // meal
-  if (type === 'meal') {
-    const mi = Number(btn.dataset.mi);
-    const mealBlock = document.querySelector(`#result .meal[data-mi="${mi}"]`);
-    if (!mealBlock) return;
-    const mealUid = mealBlock.dataset.mealUid;
-    if (LOCKS.meals[mealUid]) return;
+  } else if (type === "day") {
+    // rebuild entire day but preserve locked meals/foods
+    const newDay = tryBuildDay({ mealCount: plan.mealCount });
 
-    const targets = collectTargetsFromUI();
-    const maxShakes = Number(document.getElementById('maxShakes').value || 0);
-    const maxRepeats = Number(document.getElementById('maxRepeats').value || 1);
+    plan.meals = plan.meals.map((oldMeal, mi) => {
+      if (LOCKS.meals[oldMeal._uid]) {
+        return oldMeal; // keep entire meal
+      }
+      // else, rebuild meal, but carry locked foods
+      const newMeal = newDay.meals[mi];
+      const mergedItems = oldMeal.items.map((oldItem, fi) => {
+        if (LOCKS.foods[oldItem._uid]) {
+          return oldItem;
+        } else {
+          return newMeal.items[fi % newMeal.items.length];
+        }
+      });
+      newMeal._uid = oldMeal._uid;
+      newMeal.items = mergedItems;
+      return newMeal;
+    });
 
-    const currentTotals = computeTotals(plan);
-    const mealTotals = mealTotalsFor(plan.meals[mi]);
-    const dailyRemaining = {
-      cal: Math.max(0, targets.calMax - (currentTotals.cal - mealTotals.cal)),
-      c: Math.max(0, targets.cMax - (currentTotals.c - mealTotals.c)),
-      f: Math.max(0, targets.fMax - (currentTotals.f - mealTotals.f))
-    };
-
-    const preferredTags = foodsForMealIndex(mi, plan.mealCount) || [];
-    let replacement = null;
-    for (let attempts = 0; attempts < 200 && !replacement; attempts++) {
-      const foodCounts = {}; // local counts
-      const shakesUsed = countShakesInPlan(plan) - countShakesInMeal(plan.meals[mi]);
-      const perMealMax = { cal: Math.max(1, dailyRemaining.cal), p: 0, c: Math.max(0.1, dailyRemaining.c), f: Math.max(0.1, dailyRemaining.f) };
-      const { mealItems } = buildMeal(perMealMax, { ...dailyRemaining }, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, []);
-      if (mealItems && mealItems.length) replacement = mealItems;
-    }
-
-    if (replacement) {
-      plan.meals[mi].items = replacement;
-      recalcMeal(plan.meals[mi]);
-      recalcTotals(plan);
-    } else {
-      // fallback: two random items
-      plan.meals[mi].items = [pickPortion(sample(FOODS)), pickPortion(sample(FOODS))];
-      recalcMeal(plan.meals[mi]);
-      recalcTotals(plan);
-    }
-
+    recalcTotals(plan);
     renderResult(plan);
-    return;
   }
 }
 
