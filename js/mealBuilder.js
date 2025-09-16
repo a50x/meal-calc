@@ -297,3 +297,4 @@
   window.buildMeal = buildMeal;
   window.tryBuildDay = tryBuildDay;
 })();
+
