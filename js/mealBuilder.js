@@ -214,48 +214,59 @@
 
   // ---------------------------
   // tryBuildDay
-  function tryBuildDay(mealCount, targets, maxShakes, maxRepeats, seededLocked = {}, maxAttempts = 1200) {
-    const calMin = targets.calMin, calMax = targets.calMax;
-    const cMax = targets.cMax, fMax = targets.fMax, pMin = targets.pMin;
-
+  function tryBuildDay(opts) {
+    const {
+      mealCount,
+      calMin, calMax,
+      pMin, pMax,
+      cMin, cMax,
+      fMin, fMax,
+      maxShakes = 2,
+      maxRepeats = 1,
+      seededLocked = {},
+      maxAttempts = 1200,
+    } = opts;
+  
     let bestWithinCaps = null;
     let bestWithinCapsProtein = -Infinity;
-
+  
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const foodCounts = {};
       let shakesUsed = 0;
       const dailyRemaining = { cal: calMax, c: cMax, f: fMax };
-
+  
       const meals = [];
       let failed = false;
-
+  
       for (let mi = 0; mi < mealCount; mi++) {
         const remainingMeals = mealCount - mi;
         const perMealMax = {
           cal: Math.max(1, dailyRemaining.cal / remainingMeals),
-          p: (targets.pMax && targets.pMax > 0) ? (targets.pMax / mealCount) : 0,
+          p: (pMax && pMax > 0) ? (pMax / mealCount) : 0,
           c: Math.max(0.1, dailyRemaining.c / remainingMeals),
-          f: Math.max(0.1, dailyRemaining.f / remainingMeals)
+          f: Math.max(0.1, dailyRemaining.f / remainingMeals),
         };
-
-        const prePlaced = (seededLocked && seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi]) ? seededLocked.mealsByIndex[mi] : [];
+  
+        const prePlaced = (seededLocked.mealsByIndex && seededLocked.mealsByIndex[mi]) 
+          ? seededLocked.mealsByIndex[mi] 
+          : [];
         const preferredTags = foodsForMealIndex(mi, mealCount) || [];
-
+  
         const { mealItems, subtotal, foodCounts: newCounts, shakesUsed: newShakes, error } =
           buildMeal(perMealMax, dailyRemaining, foodCounts, shakesUsed, maxShakes, maxRepeats, preferredTags, 3, prePlaced);
-
+  
         if (error || !mealItems || mealItems.length === 0) {
           failed = true;
           break;
         }
-
+  
         for (const k in newCounts) foodCounts[k] = newCounts[k];
         shakesUsed = newShakes;
         meals.push({ items: mealItems });
       }
-
+  
       if (failed) continue;
-
+  
       const totals = meals.reduce((acc, meal) => {
         const mcal = meal.items.reduce((s, f) => s + (f.kcal || 0), 0);
         const mp = meal.items.reduce((s, f) => s + (f.p || 0), 0);
@@ -263,9 +274,9 @@
         const mf = meal.items.reduce((s, f) => s + (f.f || 0), 0);
         return { cal: acc.cal + mcal, p: acc.p + mp, c: acc.c + mc, f: acc.f + mf };
       }, { cal: 0, p: 0, c: 0, f: 0 });
-
+  
       if (totals.cal <= calMax && totals.c <= cMax && totals.f <= fMax) {
-        if (totals.cal >= calMin && totals.p >= pMin && totals.c >= targets.cMin && totals.f >= targets.fMin) {
+        if (totals.cal >= calMin && totals.p >= pMin && totals.c >= cMin && totals.f >= fMin) {
           return { meals, totals, mealCount };
         }
         if (totals.p > bestWithinCapsProtein) {
@@ -274,7 +285,7 @@
         }
       }
     }
-
+  
     if (bestWithinCaps) return bestWithinCaps;
     return null;
   }
