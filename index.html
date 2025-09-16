@@ -3,81 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <title>Safe Foods Meal Generator</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    .controls {
-      margin-bottom: 20px;
-    }
-    .controls input {
-      margin: 5px;
-    }
-    .controls button {
-      margin: 5px;
-      padding: 5px 10px;
-      font-size: 14px;
-    }
-    .meal-block {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-      padding: 10px 15px;
-    }
-    .meal-block h3 {
-      margin: 0 0 10px 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .meal-block ul {
-      list-style: none;
-      padding: 0;
-    }
-    .meal-block li {
-      margin: 5px 0;
-    }
-    .card.warn {
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 10px;
-      border-radius: 6px;
-      margin: 10px 0;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Safe Foods Meal Generator</h1>
-
-  <div class="controls">
-    <label>
-      Meals per day:
-      <input type="number" id="mealCount" value="4" min="1" max="10">
-    </label>
-    <label>
-      Max shakes:
-      <input type="number" id="maxShakes" value="0" min="0">
-    </label>
-    <label>
-      Max repeats:
-      <input type="number" id="maxRepeats" value="1" min="1">
-    </label>
-    <br>
-    <button id="generate">Generate</button>
-    <button id="exportCsvBtn">Export CSV</button>
+  <div id="app">
+    <h1>Safe Foods Meal Generator</h1>
+    <button id="generateBtn">Generate Plan</button>
+    <div id="results"></div>
   </div>
 
-  <div id="result">
-    <!-- Plan will render here -->
-  </div>
-
-  <!-- Main entry -->
-  <script type="module" src="./js/main.js"></script>
+  <script src="js/foods.js"></script>
+  <script src="js/mealBuilder.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
