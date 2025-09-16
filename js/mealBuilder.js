@@ -289,6 +289,64 @@
     if (bestWithinCaps) return bestWithinCaps;
     return null;
   }
+  
+// Rebuild Meal
+function rebuildMeal(plan, mealIndex, opts, locks) {
+  if (!plan || !plan.meals || !plan.meals[mealIndex]) return plan;
+
+  // Clone existing plan so we don’t mutate directly
+  const newPlan = JSON.parse(JSON.stringify(plan));
+
+  // Remaining macros excluding the target meal
+  const totalsExcluding = newPlan.meals.reduce((acc, meal, i) => {
+    if (i === mealIndex) return acc;
+    acc.cal += meal.items.reduce((s, f) => s + (f.kcal || 0), 0);
+    acc.p   += meal.items.reduce((s, f) => s + (f.p || 0), 0);
+    acc.c   += meal.items.reduce((s, f) => s + (f.c || 0), 0);
+    acc.f   += meal.items.reduce((s, f) => s + (f.f || 0), 0);
+    return acc;
+  }, { cal: 0, p: 0, c: 0, f: 0 });
+
+  const dailyRemaining = {
+    cal: opts.calMax - totalsExcluding.cal,
+    c:   opts.cMax - totalsExcluding.c,
+    f:   opts.fMax - totalsExcluding.f,
+  };
+
+  const perMealMax = {
+    cal: dailyRemaining.cal,
+    p:   (opts.pMax / opts.mealCount),
+    c:   dailyRemaining.c,
+    f:   dailyRemaining.f,
+  };
+
+  const prePlaced = (locks.mealsByIndex && locks.mealsByIndex[mealIndex]) 
+    ? locks.mealsByIndex[mealIndex] 
+    : [];
+
+  const preferredTags = foodsForMealIndex(mealIndex, newPlan.mealCount);
+
+  const { mealItems, subtotal } = buildMeal(
+    perMealMax, dailyRemaining, {}, 0,
+    opts.maxShakes, opts.maxRepeats,
+    preferredTags, 3, prePlaced
+  );
+
+  if (mealItems && mealItems.length) {
+    newPlan.meals[mealIndex] = { items: mealItems, subtotal };
+    newPlan.totals = newPlan.meals.reduce((acc, m) => {
+      acc.cal += m.items.reduce((s, f) => s + (f.kcal || 0), 0);
+      acc.p   += m.items.reduce((s, f) => s + (f.p || 0), 0);
+      acc.c   += m.items.reduce((s, f) => s + (f.c || 0), 0);
+      acc.f   += m.items.reduce((s, f) => s + (f.f || 0), 0);
+      return acc;
+    }, { cal: 0, p: 0, c: 0, f: 0 });
+  }
+
+  return newPlan;
+}
+
+window.rebuildMeal = rebuildMeal;
 
   // expose
   window.buildMealOrder = buildMealOrder;
