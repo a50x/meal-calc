@@ -1,17 +1,79 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Safe Foods Meal Generator</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Meal Plan Generator (Advanced)</title>
+  <link rel="icon" type="image/x-icon" href="https://icons.duckduckgo.com/ip2/www.thedailymeal.com.ico">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <h1>Safe Foods Meal Generator</h1>
-    <button id="generateBtn">Generate Plan</button>
-    <div id="results"></div>
+  <h1>Meal Plan Generator</h1>
+
+  <div class="card">
+    <div class="small muted">
+      Use your foods template. Set targets (center ± range), shakes/creami cap, meal repeats,
+      and choose Meals or Optimal (auto-select 3–5). Generate a realistic day (3–5 meals) built from atomic combos.
+    </div>
+    <div style="height:10px"></div>
+
+    <div class="controls">
+      <div>
+        <label>Calories target</label><br>
+        <input id="calTarget" type="number" value="2500" /> ± <input id="calRange" type="number" value="300" />
+      </div>
+    
+      <div>
+        <label>Protein target (g)</label><br>
+        <input id="pTarget" type="number" value="190" /> ± <input id="pRange" type="number" value="15" />
+      </div>
+    
+      <div>
+        <label>Carb target (g)</label><br>
+        <input id="cTarget" type="number" value="235" /> ± <input id="cRange" type="number" value="15" />
+      </div>
+    
+      <div>
+        <label>Fat target (g)</label><br>
+        <input id="fTarget" type="number" value="65" /> ± <input id="fRange" type="number" value="15" />
+      </div>
+    </div>
+
+    <div>
+      <label>Meals</label><br>
+      <select id="mealCount">
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+        <option value="5">5</option>
+        <option value="optimal">Optimal (3–5)</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Max shakes/creami (full portions)</label><br>
+      <input id="maxShakes" type="number" value="2" />
+    </div>
+
+    <div>
+      <label>Meal repeats allowed</label><br>
+      <input id="maxRepeats" type="number" value="1" />
+    </div>
+
+    <div style="min-width:200px; margin-top:8px">
+      <button id="generateBtn">Generate Day</button>
+      <button id="exportBtn" style="background:#2563eb;margin-left:8px">Export CSV</button>
+    </div>
   </div>
 
+  <div class="footer-note">
+    Notes: "Atomic combos" (cereal+milk, tenders+ketchup, rice+butter) are built-in.
+    The generator tries many randomized candidate days and returns the best match to your targets.
+    If no plan is found, widen ranges or increase shakes/meal repeats.
+  </div>
+
+  <div id="result"></div>
+
+  <!-- Scripts -->
   <script src="js/foods.js"></script>
   <script src="js/mealBuilder.js"></script>
   <script src="js/ui.js"></script>
