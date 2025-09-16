@@ -1,191 +1,174 @@
-import { pickPortion, sample } from "./foods.js";
-import { tryBuildDay } from "./mealBuilder.js";
+// ui.js
 
-let LOCKS = { foods: {}, meals: {} };
-let PLAN = null;
+let currentDay = {};
+let lockedFoods = { breakfast: [], lunch: [], snack: [], dinner: [] };
 
-// ---------------------------
-// Rendering
-export function renderResult(plan) {
-  PLAN = plan;
-  const resultDiv = document.getElementById("result");
-  if (!plan) {
-    resultDiv.innerHTML = "<div class='card warn'>No plan generated.</div>";
-    return;
-  }
+// ─── Rendering ──────────────────────────────────────────
 
-  let html = "";
-  plan.meals.forEach((meal, mi) => {
-    const mealUid = `meal-${mi}`;
-    const totals = mealTotals(meal);
+function renderDay(day) {
+    currentDay = day;
+    ['breakfast','lunch','snack','dinner'].forEach(mealTag => {
+        renderMeal(mealTag, day[mealTag]);
+    });
+    updateTotals();
+}
 
-    html += `<div class="card meal-block" data-mi="${mi}" data-meal-uid="${mealUid}">
-      <div class="meal-header">
-        <h3>Meal ${mi + 1}</h3>
-        <div>
-          <button class="regen-btn" data-type="meal" data-mi="${mi}" onclick="onRegenClicked(event)">🔁</button>
-          <button class="lock-btn ${LOCKS.meals[mealUid] ? "active" : ""}" onclick="toggleLockMeal('${mealUid}')">${LOCKS.meals[mealUid] ? "🔒" : "🔓"}</button>
-        </div>
-      </div>
-      <table class="food-table" data-mi="${mi}">
-        <thead>
-          <tr>
-            <th>Food</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th>
-          </tr>
-        </thead>
-        <tbody>`;
+function renderMeal(mealTag, foods) {
+    const container = document.getElementById(mealTag);
+    container.innerHTML = '';
 
-    meal.items.forEach((it, fi) => {
-      html += `<tr class="food-row" draggable="true" data-uid="${it._uid}" data-mi="${mi}">
-        <td>${it.label}</td>
-        <td>${it.kcal.toFixed(0)}</td>
-        <td>${it.p.toFixed(1)}</td>
-        <td>${it.c.toFixed(1)}</td>
-        <td>${it.f.toFixed(1)}</td>
-        <td>
-          <button class="regen-btn" data-type="food" data-item-uid="${it._uid}" onclick="onRegenClicked(event)">🔁</button>
-          <button class="lock-btn ${LOCKS.foods[it._uid] ? "active" : ""}" onclick="toggleLockFood('${it._uid}')">${LOCKS.foods[it._uid] ? "🔒" : "🔓"}</button>
-        </td>
-      </tr>`;
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'meal-header';
+    header.innerHTML = `<h2>${mealTag.charAt(0).toUpperCase() + mealTag.slice(1)}</h2>`;
+    card.appendChild(header);
+
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr>
+            <th>Food</th>
+            <th>Qty</th>
+            <th>Protein</th>
+            <th>Carbs</th>
+            <th>Fat</th>
+            <th>Calories</th>
+            <th>Lock</th>
+        </tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    foods.forEach(food => {
+        const tr = document.createElement('tr');
+        tr.draggable = true;
+        tr.dataset.meal = mealTag;
+        tr.dataset.food = food.name;
+
+        tr.innerHTML = `
+            <td>${food.name}</td>
+            <td>${food.qty}</td>
+            <td>${food.protein * food.qty}</td>
+            <td>${food.carbs * food.qty}</td>
+            <td>${food.fat * food.qty}</td>
+            <td>${food.calories * food.qty}</td>
+            <td><button class="lock-btn ${lockedFoods[mealTag].includes(food.name) ? 'active' : ''}">🔒</button></td>
+        `;
+
+        // lock button
+        tr.querySelector('.lock-btn').onclick = () => toggleLock(mealTag, food.name);
+
+        // drag events
+        tr.addEventListener('dragstart', handleDragStart);
+        tr.addEventListener('dragend', handleDragEnd);
+
+        tbody.appendChild(tr);
     });
 
-    html += `</tbody>
-      <tfoot>
-        <tr class="totals-row">
-          <td>Meal total</td>
-          <td>${totals.kcal.toFixed(0)}</td>
-          <td>${totals.p.toFixed(1)}</td>
-          <td>${totals.c.toFixed(1)}</td>
-          <td>${totals.f.toFixed(1)}</td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </table>
-    </div>`;
-  });
+    // meal totals
+    const mealTotals = calculateTotals({ [mealTag]: foods });
+    const totalsRow = document.createElement('tr');
+    totalsRow.className = 'totals-row';
+    totalsRow.innerHTML = `
+        <td>Meal Totals</td>
+        <td></td>
+        <td>${mealTotals.protein}</td>
+        <td>${mealTotals.carbs}</td>
+        <td>${mealTotals.fat}</td>
+        <td>${mealTotals.calories}</td>
+        <td></td>
+    `;
+    tbody.appendChild(totalsRow);
 
-  // Day totals
-  const dayTotals = planTotals(plan);
-  html += `<div class="card">
-    <h3>Day Totals</h3>
-    <table>
-      <tr class="totals-row">
-        <td>Calories</td><td>${dayTotals.kcal.toFixed(0)}</td>
-        <td>Protein</td><td>${dayTotals.p.toFixed(1)}</td>
-        <td>Carbs</td><td>${dayTotals.c.toFixed(1)}</td>
-        <td>Fat</td><td>${dayTotals.f.toFixed(1)}</td>
-      </tr>
-    </table>
-  </div>`;
+    table.appendChild(tbody);
+    card.appendChild(table);
+    container.appendChild(card);
 
-  resultDiv.innerHTML = html;
-  enableDragAndDrop();
+    // drop area
+    table.addEventListener('dragover', e => handleDragOver(e, mealTag));
+    table.addEventListener('drop', e => handleDrop(e, mealTag));
 }
 
-// ---------------------------
-// Totals helpers
-function mealTotals(meal) {
-  return meal.items.reduce(
-    (acc, it) => {
-      acc.kcal += it.kcal;
-      acc.p += it.p;
-      acc.c += it.c;
-      acc.f += it.f;
-      return acc;
-    },
-    { kcal: 0, p: 0, c: 0, f: 0 }
-  );
-}
+// ─── Locks ─────────────────────────────────────────────
 
-function planTotals(plan) {
-  return plan.meals.reduce(
-    (acc, meal) => {
-      const t = mealTotals(meal);
-      acc.kcal += t.kcal;
-      acc.p += t.p;
-      acc.c += t.c;
-      acc.f += t.f;
-      return acc;
-    },
-    { kcal: 0, p: 0, c: 0, f: 0 }
-  );
-}
-
-// ---------------------------
-// Locks
-window.toggleLockFood = function (uid) {
-  LOCKS.foods[uid] = !LOCKS.foods[uid];
-  renderResult(PLAN);
-};
-
-window.toggleLockMeal = function (mealUid) {
-  LOCKS.meals[mealUid] = !LOCKS.meals[mealUid];
-  renderResult(PLAN);
-};
-
-// ---------------------------
-// Regen
-window.onRegenClicked = function (e) {
-  const btn = e.currentTarget;
-  const type = btn.dataset.type;
-  if (type === "meal") {
-    const mi = Number(btn.dataset.mi);
-    PLAN.meals[mi] = tryBuildDay(1, {}, 0, 1).meals[0];
-  } else if (type === "food") {
-    const uid = btn.dataset.itemUid;
-    for (const meal of PLAN.meals) {
-      const idx = meal.items.findIndex((x) => x._uid === uid);
-      if (idx >= 0) {
-        meal.items[idx] = sample(meal.items); // naive regen placeholder
-        break;
-      }
+function toggleLock(mealTag, foodName) {
+    if (lockedFoods[mealTag].includes(foodName)) {
+        lockedFoods[mealTag] = lockedFoods[mealTag].filter(f => f !== foodName);
+    } else {
+        lockedFoods[mealTag].push(foodName);
     }
-  }
-  renderResult(PLAN);
-};
+    renderDay(currentDay);
+}
 
-// ---------------------------
-// Drag & Drop
-function enableDragAndDrop() {
-  const rows = document.querySelectorAll(".food-row");
-  let dragged = null;
+// ─── Totals ───────────────────────────────────────────
 
-  rows.forEach((row) => {
-    row.addEventListener("dragstart", (e) => {
-      dragged = row;
-      row.classList.add("dragging");
-    });
-    row.addEventListener("dragend", (e) => {
-      row.classList.remove("dragging");
-      dragged = null;
-    });
-  });
+function updateTotals() {
+    const totals = calculateTotals(currentDay);
+    const totalsEl = document.getElementById('totals');
+    totalsEl.innerHTML = `
+        <div class="card">
+            <h2>Daily Totals</h2>
+            <table>
+                <tr class="totals-row">
+                    <td>Protein</td>
+                    <td>${totals.protein} g</td>
+                </tr>
+                <tr class="totals-row">
+                    <td>Carbs</td>
+                    <td>${totals.carbs} g</td>
+                </tr>
+                <tr class="totals-row">
+                    <td>Fat</td>
+                    <td>${totals.fat} g</td>
+                </tr>
+                <tr class="totals-row">
+                    <td>Calories</td>
+                    <td>${totals.calories}</td>
+                </tr>
+            </table>
+        </div>`;
+}
 
-  const tables = document.querySelectorAll(".food-table tbody");
-  tables.forEach((tbody) => {
-    tbody.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      tbody.classList.add("drag-over");
-    });
-    tbody.addEventListener("dragleave", () => {
-      tbody.classList.remove("drag-over");
-    });
-    tbody.addEventListener("drop", (e) => {
-      e.preventDefault();
-      tbody.classList.remove("drag-over");
-      if (dragged) {
-        const oldMi = Number(dragged.dataset.mi);
-        const uid = dragged.dataset.uid;
-        const newMi = Number(tbody.parentElement.dataset.mi);
+// ─── Drag & Drop ──────────────────────────────────────
 
-        if (oldMi !== newMi) {
-          const oldMeal = PLAN.meals[oldMi];
-          const idx = oldMeal.items.findIndex((x) => x._uid === uid);
-          const [item] = oldMeal.items.splice(idx, 1);
-          PLAN.meals[newMi].items.push(item);
-          renderResult(PLAN);
-        }
-      }
-    });
-  });
+let draggedRow = null;
+
+function handleDragStart(e) {
+    draggedRow = e.currentTarget;
+    draggedRow.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    if (draggedRow) draggedRow.classList.remove('dragging');
+    draggedRow = null;
+}
+
+function handleDragOver(e, mealTag) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const table = e.currentTarget;
+    table.classList.add('drag-over');
+}
+
+function handleDrop(e, mealTag) {
+    e.preventDefault();
+    const table = e.currentTarget;
+    table.classList.remove('drag-over');
+    if (!draggedRow) return;
+
+    const fromMeal = draggedRow.dataset.meal;
+    const foodName = draggedRow.dataset.food;
+
+    // find food object
+    const foodObj = currentDay[fromMeal].find(f => f.name === foodName);
+    if (!foodObj) return;
+
+    // remove from old meal
+    currentDay[fromMeal] = currentDay[fromMeal].filter(f => f.name !== foodName);
+    // add to new meal
+    currentDay[mealTag].push(foodObj);
+
+    renderDay(currentDay);
 }
