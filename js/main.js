@@ -37,7 +37,7 @@ function generate() {
     perMealCalMax: Math.ceil((cal + calRange) / meals),
     perMealCarbMax: Math.ceil((c + cRange) / meals),
     perMealFatMax: Math.ceil((f + fRange) / meals),
-    maxAttempts: 400,
+    maxAttempts: 1200,
   };
 
   window._lastOpts = opts;
