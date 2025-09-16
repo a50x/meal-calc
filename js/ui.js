@@ -4,6 +4,12 @@
 // Note: this file expects window._lastPlan, FOODS, LOCKS, pickPortion, buildMeal, tryBuildDay, computeTotals helpers to exist
 
 // ------------------------------
+// Ensure LOCKS is initialized
+if (!window.LOCKS) {
+  window.LOCKS = { meals: {}, foods: {} };
+}
+
+// ------------------------------
 // Helper computeTotals (keeps parity with earlier computeTotals)
 function computeTotals(plan) {
   return plan.meals.reduce((acc, meal) => {
@@ -16,9 +22,22 @@ function computeTotals(plan) {
 }
 
 // ------------------------------
+// Sync locks
+function syncLocks(plan) {
+  plan.meals.forEach(meal => {
+    if (!LOCKS.meals[meal._uid]) LOCKS.meals[meal._uid] = false;
+    meal.items.forEach(it => {
+      if (!LOCKS.foods[it._uid]) LOCKS.foods[it._uid] = false;
+    });
+  });
+}
+
+// ------------------------------
 // Render
 function renderResult(plan) {
   if (!plan) return;
+  syncLocks(plan);
+
   const out = document.getElementById('result');
   out.innerHTML = '';
 
@@ -191,8 +210,6 @@ function renderResult(plan) {
         const mealUid = btn.dataset.mealUid;
         LOCKS.meals[mealUid] = !LOCKS.meals[mealUid];
       } else if (type === 'food') {
-        const mi = btn.dataset.mi;
-        const fi = btn.dataset.fi;
         const itemUid = btn.dataset.itemUid;
         LOCKS.foods[itemUid] = !LOCKS.foods[itemUid];
       }
@@ -204,40 +221,9 @@ function renderResult(plan) {
     btn.onclick = () => {
       const type = btn.dataset.type;
       if (type === 'meal') {
-        const mi = btn.dataset.mi;
-        const oldMeal = window._lastPlan.meals[mi];
-        const lockedItems = oldMeal.items.map(it => LOCKS.foods[it._uid] ? it : null);
-        const unlockCount = oldMeal.items.length - lockedItems.filter(Boolean).length;
-        const newItems = [];
-        const existingNames = oldMeal.items.map(it => it.name);
-
-        for (let i = 0; i < unlockCount; i++) {
-          let candidate = pickPortion(sample(window.FOODS));
-          let attempts = 0;
-          while ((existingNames.includes(candidate.name) || newItems.some(it => it.name === candidate.name)) && attempts < 50) {
-            candidate = pickPortion(sample(window.FOODS));
-            attempts++;
-          }
-          newItems.push(candidate);
-        }
-
-        const mergedItems = oldMeal.items.map(it => LOCKS.foods[it._uid] ? it : newItems.shift());
-        oldMeal.items = mergedItems;
-        recalcMeal(oldMeal);
-        recalcTotals(window._lastPlan);
-        renderResult(window._lastPlan);
-
+        regenMeal(btn.dataset.mealUid);
       } else if (type === 'food') {
-        const mi = btn.dataset.mi;
-        const fi = btn.dataset.fi;
-        const item = window._lastPlan.meals[mi].items[fi];
-        if (!LOCKS.foods[item._uid]) {
-          const replacement = pickPortion(sample(window.FOODS));
-          window._lastPlan.meals[mi].items[fi] = replacement;
-          recalcMeal(window._lastPlan.meals[mi]);
-          recalcTotals(window._lastPlan);
-          renderResult(window._lastPlan);
-        }
+        regenFood(btn.dataset.mealUid, btn.dataset.itemUid);
       }
     };
   });
@@ -245,21 +231,8 @@ function renderResult(plan) {
   const regenDayBtn = document.getElementById('regen-day-btn');
   if (regenDayBtn) {
     regenDayBtn.onclick = () => {
-      const mealCount = window._lastPlan.meals.length;
-      const calMin = 0, calMax = 99999; // could pass your daily targets
-      const pMin = 0, pMax = 9999;
-      const cMin = 0, cMax = 9999;
-      const fMin = 0, fMax = 9999;
-
-      const newPlan = tryBuildDay({
-        mealCount,
-        calMin, calMax,
-        pMin, pMax,
-        cMin, cMax,
-        fMin, fMax,
-        seededLocked: LOCKS
-      });
-
+      const opts = { ...window._lastOpts, seededLocked: LOCKS };
+      const newPlan = tryBuildDay(opts);
       if (newPlan) {
         window._lastPlan = newPlan;
         renderResult(window._lastPlan);
@@ -286,3 +259,44 @@ function recalcTotals(plan) {
   plan.totals = computeTotals(plan);
 }
 
+// ------------------------------
+// Regen helpers
+function regenMeal(mealId) {
+  if (!window._lastPlan) return;
+  const opts = { ...window._lastOpts };
+  const newLocks = JSON.parse(JSON.stringify(LOCKS));
+
+  Object.keys(newLocks.meals).forEach(mid => {
+    if (mid !== mealId) newLocks.meals[mid] = true;
+  });
+  Object.keys(newLocks.foods).forEach(fid => {
+    const meal = window._lastPlan.meals.find(m => m._uid === mealId);
+    if (!meal || !meal.items.find(it => it._uid === fid)) {
+      newLocks.foods[fid] = true;
+    }
+  });
+
+  opts.seededLocked = newLocks;
+  const plan = tryBuildDay(opts);
+  if (plan) {
+    window._lastPlan = plan;
+    renderResult(plan);
+  }
+}
+
+function regenFood(mealId, itemId) {
+  if (!window._lastPlan) return;
+  const opts = { ...window._lastOpts };
+  const newLocks = JSON.parse(JSON.stringify(LOCKS));
+
+  Object.keys(newLocks.foods).forEach(fid => {
+    if (fid !== itemId) newLocks.foods[fid] = true;
+  });
+  opts.seededLocked = newLocks;
+
+  const plan = tryBuildDay(opts);
+  if (plan) {
+    window._lastPlan = plan;
+    renderResult(plan);
+  }
+}
