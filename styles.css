@@ -1,193 +1,90 @@
-:root {
-  --bg: #f7fafc;
-  --card: #ffffff;
-  --muted: #64748b;
-  --accent: #06b6d4;
-  --accent-hover: #0891b2;
-  --text: #0f172a;
-  --border: #e2e8f0;
-}
-
+/* ------------------------
+   Base Layout
+------------------------- */
 body {
-  font-family: Inter, system-ui, -apple-system, Arial, sans-serif;
-  margin: 0;
-  padding: 24px;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #fafafa;
+  color: #333;
 }
 
-h1, h2 {
-  margin: 0 0 12px;
-  font-weight: 600;
-  color: var(--text);
+h2 {
+  margin-top: 30px;
+  font-size: 1.5rem;
 }
 
-.card {
-  background: var(--card);
-  padding: 18px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-  margin-bottom: 16px;
-  transition: box-shadow 0.2s ease;
-}
-
-.card:hover {
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-}
-
-label {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 14px;
-  color: var(--text);
-  font-weight: 500;
-}
-
-input[type=number], select {
-  padding: 6px 8px;
-  margin-right: 10px;
-  width: 120px;
-  border: 1px solid var(--border);
+/* ------------------------
+   Meal Table
+------------------------- */
+.meal {
+  margin-bottom: 30px;
+  border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
   background: #fff;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  padding: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-
-input[type=number]:focus, select:focus {
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-button {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 9px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 14px;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-
-button:hover {
-  background: var(--accent-hover);
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-  font-size: 14px;
-}
-
-th {
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid var(--border);
-  padding: 10px 8px;
-  background: #f8fafc;
-}
-
-td {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-tr:hover td {
-  background: #f9fbfc;
-}
-
-.pill {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #eef2f7;
-  margin-right: 8px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.muted { color: var(--muted); }
-.ok { color: #16a34a; font-weight: 500; }
-.warn { color: #dc2626; font-weight: 500; }
-.small { font-size: 13px; color: var(--muted); }
-.footer-note { font-size: 13px; color: #334155; margin-top: 8px; }
-
-/* ─── Meal/Food Controls ─────────────────────────────── */
 
 .meal-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.meal-header .meal-lock {
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-left: 8px;
+}
+
+.food-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.food-table th,
+.food-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.food-table th {
+  font-weight: bold;
+  background: #f3f3f3;
 }
 
 .food-row {
+  display: table-row;
+}
+
+.food-name {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
-.lock-btn,
-.regen-btn {
-  border: none;
-  background: transparent;
+.food-name .food-lock {
   cursor: pointer;
-  margin-left: 6px;
-  font-size: 15px;
-  transition: opacity 0.2s ease, transform 0.1s ease;
-  opacity: 0.25; /* default dimmed */
+  margin-left: 8px;
 }
 
-.lock-btn.active,
-.regen-btn.active {
-  opacity: 1;
+/* ------------------------
+   Totals Row
+------------------------- */
+.meal-total {
+  font-weight: bold;
+  background: #f9f9f9;
 }
 
-.lock-btn:active,
-.regen-btn:active {
-  transform: scale(0.9);
-}
-
-.lock-btn:hover,
-.regen-btn:hover {
-  opacity: 0.6;
-}
-
-/* ─── Drag & Drop Indicators ─────────────────────────── */
-
-.dragging {
-  opacity: 0.5;
-}
-
-.drag-over {
-  outline: 2px dashed var(--accent);
-  outline-offset: -4px;
-  background: #ecfeff;
-}
-
-/* ─── Totals Row Highlight ───────────────────────────── */
-
-tr.totals-row td {
-  font-weight: 600;
-  background: #f1f5f9;
-  border-top: 2px solid var(--border);
+/* ------------------------
+   Inputs
+------------------------- */
+.qty-input {
+  width: 60px;
+  padding: 3px;
+  text-align: center;
 }
