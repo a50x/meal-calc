@@ -1,21 +1,12 @@
-// main.js — handles wiring & generate()
-import { renderResult, exportCSV, loadFoods, tryBuildDay, foods, currentPlan } from "./ui.js";
+// main.js — bootstrap
 
-async function generate() {
-  const loaded = await loadFoods();
-  foods.length = 0;
-  foods.push(...loaded);
+(async function(){
+  await loadFoods();
 
-  const plan = tryBuildDay(foods);
-  if (plan) {
-    Object.assign(currentPlan, plan);
-    renderResult(plan);
-  } else {
-    alert("Failed to generate meal plan.");
-  }
-}
-
-document.getElementById("generate").addEventListener("click", generate);
-document.getElementById("export").addEventListener("click", () => exportCSV(currentPlan));
-
-window.addEventListener("DOMContentLoaded", generate);
+  const plan = tryBuildDay(
+    { kcalMin:1800, kcalMax:2400, kcalTarget:2100, proteinMin:120 },
+    { mealKcalMax:900, mealSizeMax:6, shakesPerMealMax:2, dayKcalMax:2500, dayCarbMax:300, dayFatMax:90 },
+    4
+  );
+  if (plan) renderResult(plan);
+})();
