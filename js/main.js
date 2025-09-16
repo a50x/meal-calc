@@ -42,11 +42,16 @@ function generate() {
 
   window._lastOpts = opts;
   const plan = tryBuildDay(opts);
+
   if (plan) {
+    // recalc totals to ensure meal.subtotal exists
+    recalcTotals(plan);
+
     window._lastPlan = plan;
     window._lastPlan.allItems = plan.meals.flatMap((m) => m.items);
     renderResult(plan);
   } else {
-    document.getElementById("result").innerHTML = "<p>No valid plan found. Try widening ranges.</p>";
+    document.getElementById("result").innerHTML =
+      "<p>No valid plan found. Try widening ranges.</p>";
   }
 }
