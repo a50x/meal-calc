@@ -25,13 +25,16 @@ function generate() {
   else meals = parseInt(meals, 10);
 
   const opts = {
-    totalMeals: meals,
-    totalKcalMin: cal - calRange,
-    totalKcalMax: cal + calRange,
-    totalProteinMin: p - pRange,
-    totalCarbMax: c + cRange,
-    totalFatMax: f + fRange,
-    perMealKcalMax: Math.ceil((cal + calRange) / meals),
+    mealCount: meals,
+    calMin: cal - calRange,
+    calMax: cal + calRange,
+    pMin: p - pRange,
+    pMax: p + pRange,
+    cMin: c - cRange,
+    cMax: c + cRange,
+    fMin: f - fRange,
+    fMax: f + fRange,
+    perMealCalMax: Math.ceil((cal + calRange) / meals),
     perMealCarbMax: Math.ceil((c + cRange) / meals),
     perMealFatMax: Math.ceil((f + fRange) / meals),
     maxAttempts: 400,
