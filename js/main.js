@@ -1,3 +1,4 @@
+// main.js
 window.addEventListener("DOMContentLoaded", async () => {
   await loadFoods();
 
@@ -10,6 +11,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
+// ------------------------------
+// Generate a new plan or regenerate day
 function generate() {
   const cal = parseInt(document.getElementById("calTarget").value, 10);
   const calRange = parseInt(document.getElementById("calRange").value, 10);
@@ -38,20 +41,52 @@ function generate() {
     perMealCarbMax: Math.ceil((c + cRange) / meals),
     perMealFatMax: Math.ceil((f + fRange) / meals),
     maxAttempts: 1200,
+    seededLocked: window.LOCKS || {}, // <-- pass current locks
   };
 
   window._lastOpts = opts;
+
   const plan = tryBuildDay(opts);
 
   if (plan) {
-    // recalc totals to ensure meal.subtotal exists
+    // Ensure each meal has subtotal & _uid
+    plan.meals.forEach(m => {
+      if (!m._uid) m._uid = uid('m');
+      recalcMeal(m);
+    });
+
     recalcTotals(plan);
 
     window._lastPlan = plan;
-    window._lastPlan.allItems = plan.meals.flatMap((m) => m.items);
+    window._lastPlan.allItems = plan.meals.flatMap(m => m.items);
+
     renderResult(plan);
   } else {
     document.getElementById("result").innerHTML =
       "<p>No valid plan found. Try widening ranges.</p>";
   }
+}
+
+// ------------------------------
+// Helpers for recalculating meals & totals
+function recalcMeal(meal) {
+  const subtotal = { kcal: 0, p: 0, c: 0, f: 0 };
+  meal.items.forEach(it => {
+    subtotal.cal = (subtotal.cal || 0) + (it.kcal || 0);
+    subtotal.kcal = subtotal.cal;
+    subtotal.p += it.p || 0;
+    subtotal.c += it.c || 0;
+    subtotal.f += it.f || 0;
+  });
+  meal.subtotal = subtotal;
+}
+
+function recalcTotals(plan) {
+  plan.totals = plan.meals.reduce((acc, meal) => {
+    acc.cal += meal.subtotal.kcal || meal.subtotal.cal || 0;
+    acc.p += meal.subtotal.p || 0;
+    acc.c += meal.subtotal.c || 0;
+    acc.f += meal.subtotal.f || 0;
+    return acc;
+  }, { cal: 0, p: 0, c: 0, f: 0 });
 }
