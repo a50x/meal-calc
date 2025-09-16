@@ -1,91 +1,87 @@
-// ui.js — handles rendering, locks, regen, drag/drop, totals
-import { tryBuildDay } from "./mealBuilder.js";
-import { loadFoods } from "./foods.js";
+// ui.js — rendering + interactivity
 
-let foods = [];
-let currentPlan = {};
-let lockedMeals = {};
-let lockedFoods = {};
-
-// --- Rendering ---
 function renderResult(plan) {
-  const container = document.getElementById("result");
-  container.innerHTML = "";
+  window._lastPlan = plan;
+  const container = document.getElementById('result');
+  container.innerHTML = '';
 
-  for (const [mealType, items] of Object.entries(plan)) {
-    const mealDiv = document.createElement("div");
-    mealDiv.className = "meal";
-    mealDiv.innerHTML = `<h3>${mealType}</h3>`;
+  plan.meals.forEach((meal, mi) => {
+    const mealDiv = document.createElement('div');
+    mealDiv.className = 'meal';
+    mealDiv.innerHTML = `<h3>${meal.slot.toUpperCase()}
+      <button class="lock-btn" data-meal="${meal.id}">${LOCKS.meals[meal.id]?'🔒':'🔓'}</button>
+      <button class="regen-btn" data-meal="${meal.id}">♻️</button>
+    </h3>`;
 
-    const ul = document.createElement("ul");
-
-    items.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = `${item.name} (${item.qty} ${item.unit})`;
-
-      // Lock food button
-      const lockBtn = document.createElement("button");
-      lockBtn.textContent = lockedFoods[item.id] ? "🔒" : "🔓";
-      lockBtn.onclick = () => {
-        if (lockedFoods[item.id]) {
-          delete lockedFoods[item.id];
-        } else {
-          lockedFoods[item.id] = true;
-        }
-        renderResult(currentPlan);
-      };
-      li.appendChild(lockBtn);
-
-      // Regen food button
-      const regenBtn = document.createElement("button");
-      regenBtn.textContent = "🔄";
-      regenBtn.onclick = () => {
-        const pool = foods.filter(f => f.tags?.includes(mealType));
-        const replacement = pool[Math.floor(Math.random() * pool.length)];
-        const idx = currentPlan[mealType].findIndex(f => f.id === item.id);
-        if (idx >= 0) currentPlan[mealType][idx] = replacement;
-        renderResult(currentPlan);
-      };
-      li.appendChild(regenBtn);
-
-      ul.appendChild(li);
+    const list = document.createElement('ul');
+    meal.items.forEach(it => {
+      const li = document.createElement('li');
+      li.draggable = true;
+      li.dataset.uid = it._uid;
+      li.innerHTML = `${it.name} x${it.qty} (${it.kcal.toFixed(0)}kcal P${it.p.toFixed(0)} C${it.c.toFixed(0)} F${it.f.toFixed(0)})
+        <button class="lock-btn" data-item="${it._uid}">${LOCKS.foods[it._uid]?'🔒':'🔓'}</button>
+        <button class="regen-btn" data-item="${it._uid}">♻️</button>`;
+      list.appendChild(li);
     });
-
-    // Lock meal button
-    const lockMealBtn = document.createElement("button");
-    lockMealBtn.textContent = lockedMeals[mealType] ? "Lock meal 🔒" : "Lock meal 🔓";
-    lockMealBtn.onclick = () => {
-      if (lockedMeals[mealType]) {
-        delete lockedMeals[mealType];
-      } else {
-        lockedMeals[mealType] = true;
-      }
-      renderResult(currentPlan);
-    };
-
-    mealDiv.appendChild(ul);
-    mealDiv.appendChild(lockMealBtn);
+    mealDiv.appendChild(list);
     container.appendChild(mealDiv);
-  }
+  });
+
+  const totalsDiv = document.createElement('div');
+  totalsDiv.className = 'totals';
+  totalsDiv.innerHTML = `<h3>Totals</h3>
+    Kcal ${plan.totals.kcal.toFixed(0)},
+    P ${plan.totals.p.toFixed(0)},
+    C ${plan.totals.c.toFixed(0)},
+    F ${plan.totals.f.toFixed(0)}`;
+  container.appendChild(totalsDiv);
+
+  attachUIHandlers();
 }
 
-// --- CSV Export ---
-function exportCSV(plan) {
-  const rows = [["Meal", "Food", "Qty", "Unit"]];
-  for (const [mealType, items] of Object.entries(plan)) {
-    for (const item of items) {
-      rows.push([mealType, item.name, item.qty, item.unit]);
+function attachUIHandlers() {
+  document.querySelectorAll('.lock-btn').forEach(btn => {
+    btn.onclick = onLockToggle;
+  });
+  document.querySelectorAll('.regen-btn').forEach(btn => {
+    btn.onclick = onRegenClicked;
+  });
+}
+
+// lock toggle
+function onLockToggle(e) {
+  const mealId = e.target.dataset.meal;
+  const itemId = e.target.dataset.item;
+  if (mealId) LOCKS.meals[mealId] = !LOCKS.meals[mealId];
+  if (itemId) LOCKS.foods[itemId] = !LOCKS.foods[itemId];
+  renderResult(window._lastPlan);
+}
+
+// regen
+function onRegenClicked(e) {
+  const mealId = e.target.dataset.meal;
+  const itemId = e.target.dataset.item;
+  const plan = window._lastPlan;
+  if (!plan) return;
+
+  if (mealId) {
+    const mealIdx = plan.meals.findIndex(m => m.id===mealId);
+    if (mealIdx>=0) {
+      const slot = plan.meals[mealIdx].slot;
+      plan.meals[mealIdx] = buildMeal(slot, mealIdx, plan.meals.length,
+        { kcalMin:1800, kcalMax:2400, kcalTarget:2100, proteinMin:120 },
+        { mealKcalMax:900, mealSizeMax:6, shakesPerMealMax:2, dayKcalMax:2500, dayCarbMax:300, dayFatMax:90 },
+        []
+      );
     }
   }
-  const csv = rows.map(r => r.join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "meal-plan.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+  if (itemId) {
+    for (let meal of plan.meals) {
+      const idx = meal.items.findIndex(it => it._uid===itemId);
+      if (idx>=0) {
+        meal.items[idx] = pickPortion(sample(FOODS));
+      }
+    }
+  }
+  renderResult(plan);
 }
-
-export { renderResult, exportCSV, loadFoods, tryBuildDay, foods, currentPlan, lockedMeals, lockedFoods };
