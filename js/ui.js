@@ -38,6 +38,10 @@ function renderResult(plan) {
   if (!plan) return;
   syncLocks(plan);
 
+  // make sure subtotals exist
+  plan.meals.forEach(recalcMeal);
+  recalcTotals(plan);
+
   const out = document.getElementById('result');
   out.innerHTML = '';
 
@@ -172,7 +176,7 @@ function renderResult(plan) {
     subtotalRow.innerHTML = `
       <td style="font-weight:700">Meal subtotal</td>
       <td></td>
-      <td>${(meal.subtotal.cal || meal.subtotal.kcal || 0).toFixed ? (meal.subtotal.kcal || meal.subtotal.cal || 0).toFixed(0) : '0'}</td>
+      <td>${(meal.subtotal.kcal || meal.subtotal.cal || 0).toFixed(0)}</td>
       <td>${(meal.subtotal.p || 0).toFixed(1)}</td>
       <td>${(meal.subtotal.c || 0).toFixed(1)}</td>
       <td>${(meal.subtotal.f || 0).toFixed(1)}</td>
@@ -234,6 +238,8 @@ function renderResult(plan) {
       const opts = { ...window._lastOpts, seededLocked: LOCKS };
       const newPlan = tryBuildDay(opts);
       if (newPlan) {
+        recalcTotals(newPlan);
+        newPlan.meals.forEach(recalcMeal);
         window._lastPlan = newPlan;
         renderResult(window._lastPlan);
       }
@@ -279,6 +285,8 @@ function regenMeal(mealId) {
   opts.seededLocked = newLocks;
   const plan = tryBuildDay(opts);
   if (plan) {
+    plan.meals.forEach(recalcMeal);
+    recalcTotals(plan);
     window._lastPlan = plan;
     renderResult(plan);
   }
@@ -296,6 +304,8 @@ function regenFood(mealId, itemId) {
 
   const plan = tryBuildDay(opts);
   if (plan) {
+    plan.meals.forEach(recalcMeal);
+    recalcTotals(plan);
     window._lastPlan = plan;
     renderResult(plan);
   }
