@@ -59,6 +59,7 @@ async function loadFoods() {
       const name = entry.name || entry.id || (entry.label || '').toString();
       const id = entry.id || _slugify(name);
       const kcal = Number(entry.kcal ?? entry.cal ?? 0);
+      const cal = kcal;
       const p = Number(entry.p ?? entry.protein ?? 0);
       const c = Number(entry.c ?? entry.carbs ?? 0);
       const f = Number(entry.f ?? entry.fat ?? 0);
@@ -131,7 +132,7 @@ window.loadFoods = loadFoods;
 function pickPortion(food, forcedQty = null) {
   if (!food) return null;
 
-  const baseKcal = Number(food.kcal || food.cal || 0);
+  const baseKcal = Number(food.kcal || 0);
   const baseP = Number(food.p || food.protein || 0);
   const baseC = Number(food.c || food.carbs || 0);
   const baseF = Number(food.f || food.fat || 0);
