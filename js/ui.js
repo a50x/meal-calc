@@ -261,54 +261,45 @@ function recalcTotals(plan) {
 }
 
 // ------------------------------
-// Regen helpers (scoped rebuilds instead of whole day)
+// Regen helpers (scoped rebuilds using rebuildMeal)
 function regenMeal(mealId) {
-  if (!window._lastPlan) return;
+  if (!window._lastPlan || !window._lastOpts) return;
 
-  const plan = JSON.parse(JSON.stringify(window._lastPlan));
+  const plan = window._lastPlan;
   const mealIndex = plan.meals.findIndex(m => m._uid === mealId);
   if (mealIndex === -1) return;
-
-  const oldMeal = plan.meals[mealIndex];
   if (LOCKS.meals[mealId]) return;
 
-  const newMeal = buildMeal(oldMeal.slot, window._lastOpts, { lockedFoods: LOCKS.foods });
-  if (newMeal) {
-    newMeal._uid = oldMeal._uid;
-    plan.meals[mealIndex] = newMeal;
-    recalcMeal(newMeal);
-    recalcTotals(plan);
-    syncLocks(plan);
-    window._lastPlan = plan;
-    renderResult(plan);
+  const newPlan = rebuildMeal(plan, mealIndex, window._lastOpts, LOCKS);
+  if (newPlan) {
+    newPlan.meals[mealIndex]._uid = plan.meals[mealIndex]._uid;
+    newPlan.meals[mealIndex].items.forEach(it => {
+      if (!it._uid) it._uid = uid('i');
+    });
+    recalcMeal(newPlan.meals[mealIndex]);
+    recalcTotals(newPlan);
+    syncLocks(newPlan);
+    window._lastPlan = newPlan;
+    renderResult(newPlan);
   }
 }
 
 function regenFood(mealId, itemId) {
-  if (!window._lastPlan) return;
+  if (!window._lastPlan || !window._lastOpts) return;
 
-  const plan = JSON.parse(JSON.stringify(window._lastPlan));
-  const meal = plan.meals.find(m => m._uid === mealId);
-  if (!meal || LOCKS.foods[itemId]) return;
+  const plan = window._lastPlan;
+  const mealIndex = plan.meals.findIndex(m => m._uid === mealId);
+  if (mealIndex === -1) return;
 
+  const meal = plan.meals[mealIndex];
   const itemIndex = meal.items.findIndex(it => it._uid === itemId);
   if (itemIndex === -1) return;
+  if (LOCKS.foods[itemId]) return;
 
-  const oldItem = meal.items[itemIndex];
-  const newItem = pickPortion(oldItem.slot || meal.slot, window._lastOpts);
-  if (newItem) {
-    newItem._uid = oldItem._uid;
-    // recalc macros
-    newItem.kcal = (newItem.base_kcal || newItem.kcal || 0) * (newItem.qty || 1);
-    newItem.p = (newItem.base_p || newItem.p || 0) * (newItem.qty || 1);
-    newItem.c = (newItem.base_c || newItem.c || 0) * (newItem.qty || 1);
-    newItem.f = (newItem.base_f || newItem.f || 0) * (newItem.qty || 1);
+  // Remove item lock temporarily
+  if (LOCKS.meals[mealId]) return;
+  LOCKS.foods[itemId] = false;
 
-    meal.items[itemIndex] = newItem;
-    recalcMeal(meal);
-    recalcTotals(plan);
-    syncLocks(plan);
-    window._lastPlan = plan;
-    renderResult(plan);
-  }
+  // Regen the meal containing that food
+  regenMeal(mealId);
 }
