@@ -1,7 +1,7 @@
 // ui.js
 // Rendering and UI interactions (depends on mealBuilder.js functions and global utilities)
 
-// Note: this file expects window._lastPlan, FOODS, LOCKS, pickPortion, buildMeal, tryBuildDay, computeTotals helpers to exist
+// Note: expects window._lastPlan, FOODS, LOCKS, pickPortion, buildMeal, tryBuildDay to exist
 
 // ------------------------------
 // Ensure LOCKS is initialized
@@ -10,15 +10,15 @@ if (!window.LOCKS) {
 }
 
 // ------------------------------
-// Helper computeTotals (keeps parity with earlier computeTotals)
+// Helper computeTotals
 function computeTotals(plan) {
   return plan.meals.reduce((acc, meal) => {
     const mcal = meal.items.reduce((s, f) => s + (f.kcal || 0), 0);
     const mp = meal.items.reduce((s, f) => s + (f.p || 0), 0);
     const mc = meal.items.reduce((s, f) => s + (f.c || 0), 0);
     const mf = meal.items.reduce((s, f) => s + (f.f || 0), 0);
-    return { cal: acc.cal + mcal, p: acc.p + mp, c: acc.c + mc, f: acc.f + mf };
-  }, { cal: 0, p: 0, c: 0, f: 0 });
+    return { kcal: acc.kcal + mcal, p: acc.p + mp, c: acc.c + mc, f: acc.f + mf };
+  }, { kcal: 0, p: 0, c: 0, f: 0 });
 }
 
 // ------------------------------
@@ -38,14 +38,13 @@ function renderResult(plan) {
   if (!plan) return;
   syncLocks(plan);
 
-  // make sure subtotals exist
   plan.meals.forEach(recalcMeal);
   recalcTotals(plan);
 
   const out = document.getElementById('result');
   out.innerHTML = '';
 
-  // Ensure each meal and item has stable _uid
+  // Ensure each meal/item has stable _uid and base macros
   plan.meals = plan.meals.map(m => {
     if (!m._uid) m._uid = uid('m');
     m.items = m.items.map(it => {
@@ -176,7 +175,7 @@ function renderResult(plan) {
     subtotalRow.innerHTML = `
       <td style="font-weight:700">Meal subtotal</td>
       <td></td>
-      <td>${(meal.subtotal.kcal || meal.subtotal.cal || 0).toFixed(0)}</td>
+      <td>${(meal.subtotal.kcal || 0).toFixed(0)}</td>
       <td>${(meal.subtotal.p || 0).toFixed(1)}</td>
       <td>${(meal.subtotal.c || 0).toFixed(1)}</td>
       <td>${(meal.subtotal.f || 0).toFixed(1)}</td>
@@ -189,9 +188,9 @@ function renderResult(plan) {
   });
 
   // Grand totals
-  const grand = { cal: 0, p: 0, c: 0, f: 0 };
+  const grand = { kcal: 0, p: 0, c: 0, f: 0 };
   plan.meals.forEach(m => {
-    grand.cal += m.subtotal.kcal || m.subtotal.cal || 0;
+    grand.kcal += m.subtotal.kcal || 0;
     grand.p += m.subtotal.p || 0;
     grand.c += m.subtotal.c || 0;
     grand.f += m.subtotal.f || 0;
@@ -200,7 +199,7 @@ function renderResult(plan) {
   const grandRow = document.createElement('div');
   grandRow.className = 'grand-totals';
   grandRow.innerHTML = `
-    <h3>Day totals — kcal: ${grand.cal.toFixed(0)}, P: ${grand.p.toFixed(1)}, C: ${grand.c.toFixed(1)}, F: ${grand.f.toFixed(1)}</h3>
+    <h3>Day totals — kcal: ${grand.kcal.toFixed(0)}, P: ${grand.p.toFixed(1)}, C: ${grand.c.toFixed(1)}, F: ${grand.f.toFixed(1)}</h3>
     <button id="regen-day-btn">Regenerate Day</button>
   `;
   out.appendChild(grandRow);
@@ -238,10 +237,10 @@ function renderResult(plan) {
       const opts = { ...window._lastOpts, seededLocked: LOCKS };
       const newPlan = tryBuildDay(opts);
       if (newPlan) {
-        recalcTotals(newPlan);
         newPlan.meals.forEach(recalcMeal);
+        recalcTotals(newPlan);
         window._lastPlan = newPlan;
-        renderResult(window._lastPlan);
+        renderResult(newPlan);
       }
     };
   }
@@ -252,8 +251,7 @@ function renderResult(plan) {
 function recalcMeal(meal) {
   const subtotal = { kcal: 0, p: 0, c: 0, f: 0 };
   meal.items.forEach(it => {
-    subtotal.cal = (subtotal.cal || 0) + (it.kcal || 0);
-    subtotal.kcal = subtotal.cal;
+    subtotal.kcal += it.kcal || 0;
     subtotal.p += it.p || 0;
     subtotal.c += it.c || 0;
     subtotal.f += it.f || 0;
@@ -272,14 +270,9 @@ function regenMeal(mealId) {
   const opts = { ...window._lastOpts };
   const newLocks = JSON.parse(JSON.stringify(LOCKS));
 
+  // Lock all other meals
   Object.keys(newLocks.meals).forEach(mid => {
     if (mid !== mealId) newLocks.meals[mid] = true;
-  });
-  Object.keys(newLocks.foods).forEach(fid => {
-    const meal = window._lastPlan.meals.find(m => m._uid === mealId);
-    if (!meal || !meal.items.find(it => it._uid === fid)) {
-      newLocks.foods[fid] = true;
-    }
   });
 
   opts.seededLocked = newLocks;
@@ -297,6 +290,7 @@ function regenFood(mealId, itemId) {
   const opts = { ...window._lastOpts };
   const newLocks = JSON.parse(JSON.stringify(LOCKS));
 
+  // Lock all foods except this one
   Object.keys(newLocks.foods).forEach(fid => {
     if (fid !== itemId) newLocks.foods[fid] = true;
   });
