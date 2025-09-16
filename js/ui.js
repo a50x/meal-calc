@@ -1,8 +1,6 @@
 // ui.js
 // Rendering and UI interactions (depends on mealBuilder.js functions and global utilities)
 
-// Note: expects window._lastPlan, FOODS, LOCKS, pickPortion, buildMeal, tryBuildDay to exist
-
 // ------------------------------
 // Ensure LOCKS is initialized
 if (!window.LOCKS) {
@@ -76,7 +74,7 @@ function renderResult(plan) {
         <button class="icon-btn lock ${locked ? 'active' : ''}" data-type="meal" data-meal-uid="${meal._uid}" title="Lock meal">
           ${locked ? '🔒' : '🔓'}
         </button>
-        <button class="icon-btn regen" data-type="meal" data-mi="${mi}" data-meal-uid="${meal._uid}" title="Regenerate meal">🔁</button>
+        <button class="icon-btn regen" data-type="meal" data-meal-uid="${meal._uid}" title="Regenerate meal">🔁</button>
       </div>
     `;
     mealCard.appendChild(header);
@@ -124,10 +122,10 @@ function renderResult(plan) {
         <td class="td-c">${(it.c || 0).toFixed(1)}</td>
         <td class="td-f">${(it.f || 0).toFixed(1)}</td>
         <td class="food-actions">
-          <button class="icon-btn lock ${foodLocked ? 'active' : ''}" data-type="food" data-mi="${mi}" data-fi="${fi}" data-item-uid="${it._uid}" title="Lock food">
+          <button class="icon-btn lock ${foodLocked ? 'active' : ''}" data-type="food" data-item-uid="${it._uid}" title="Lock food">
             ${foodLocked ? '🔒' : '🔓'}
           </button>
-          <button class="icon-btn regen" data-type="food" data-mi="${mi}" data-fi="${fi}" data-item-uid="${it._uid}" title="Regenerate food">🔁</button>
+          <button class="icon-btn regen" data-type="food" data-meal-uid="${meal._uid}" data-item-uid="${it._uid}" title="Regenerate food">🔁</button>
         </td>
       `;
 
@@ -210,11 +208,9 @@ function renderResult(plan) {
     btn.onclick = () => {
       const type = btn.dataset.type;
       if (type === 'meal') {
-        const mealUid = btn.dataset.mealUid;
-        LOCKS.meals[mealUid] = !LOCKS.meals[mealUid];
+        LOCKS.meals[btn.dataset.mealUid] = !LOCKS.meals[btn.dataset.mealUid];
       } else if (type === 'food') {
-        const itemUid = btn.dataset.itemUid;
-        LOCKS.foods[itemUid] = !LOCKS.foods[itemUid];
+        LOCKS.foods[btn.dataset.itemUid] = !LOCKS.foods[btn.dataset.itemUid];
       }
       renderResult(window._lastPlan);
     };
@@ -239,6 +235,7 @@ function renderResult(plan) {
       if (newPlan) {
         newPlan.meals.forEach(recalcMeal);
         recalcTotals(newPlan);
+        syncLocks(newPlan);
         window._lastPlan = newPlan;
         renderResult(newPlan);
       }
@@ -264,22 +261,24 @@ function recalcTotals(plan) {
 }
 
 // ------------------------------
-// Regen helpers
+// Regen helpers (scoped rebuilds instead of whole day)
 function regenMeal(mealId) {
   if (!window._lastPlan) return;
-  const opts = { ...window._lastOpts };
-  const newLocks = JSON.parse(JSON.stringify(LOCKS));
 
-  // Lock all other meals
-  Object.keys(newLocks.meals).forEach(mid => {
-    if (mid !== mealId) newLocks.meals[mid] = true;
-  });
+  const plan = JSON.parse(JSON.stringify(window._lastPlan));
+  const mealIndex = plan.meals.findIndex(m => m._uid === mealId);
+  if (mealIndex === -1) return;
 
-  opts.seededLocked = newLocks;
-  const plan = tryBuildDay(opts);
-  if (plan) {
-    plan.meals.forEach(recalcMeal);
+  const oldMeal = plan.meals[mealIndex];
+  if (LOCKS.meals[mealId]) return;
+
+  const newMeal = buildMeal(oldMeal.slot, window._lastOpts, { lockedFoods: LOCKS.foods });
+  if (newMeal) {
+    newMeal._uid = oldMeal._uid;
+    plan.meals[mealIndex] = newMeal;
+    recalcMeal(newMeal);
     recalcTotals(plan);
+    syncLocks(plan);
     window._lastPlan = plan;
     renderResult(plan);
   }
@@ -287,19 +286,28 @@ function regenMeal(mealId) {
 
 function regenFood(mealId, itemId) {
   if (!window._lastPlan) return;
-  const opts = { ...window._lastOpts };
-  const newLocks = JSON.parse(JSON.stringify(LOCKS));
 
-  // Lock all foods except this one
-  Object.keys(newLocks.foods).forEach(fid => {
-    if (fid !== itemId) newLocks.foods[fid] = true;
-  });
-  opts.seededLocked = newLocks;
+  const plan = JSON.parse(JSON.stringify(window._lastPlan));
+  const meal = plan.meals.find(m => m._uid === mealId);
+  if (!meal || LOCKS.foods[itemId]) return;
 
-  const plan = tryBuildDay(opts);
-  if (plan) {
-    plan.meals.forEach(recalcMeal);
+  const itemIndex = meal.items.findIndex(it => it._uid === itemId);
+  if (itemIndex === -1) return;
+
+  const oldItem = meal.items[itemIndex];
+  const newItem = pickPortion(oldItem.slot || meal.slot, window._lastOpts);
+  if (newItem) {
+    newItem._uid = oldItem._uid;
+    // recalc macros
+    newItem.kcal = (newItem.base_kcal || newItem.kcal || 0) * (newItem.qty || 1);
+    newItem.p = (newItem.base_p || newItem.p || 0) * (newItem.qty || 1);
+    newItem.c = (newItem.base_c || newItem.c || 0) * (newItem.qty || 1);
+    newItem.f = (newItem.base_f || newItem.f || 0) * (newItem.qty || 1);
+
+    meal.items[itemIndex] = newItem;
+    recalcMeal(meal);
     recalcTotals(plan);
+    syncLocks(plan);
     window._lastPlan = plan;
     renderResult(plan);
   }
