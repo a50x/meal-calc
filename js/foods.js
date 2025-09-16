@@ -1,39 +1,60 @@
-// foods.js — loading and portioning
+// ------------------------------
+// Core Data + State
+// ------------------------------
+window.FOODS = [];
+window.UID_COUNTER = 0;
+window.LOCKS = { foods: {}, meals: {} };
 
-let FOODS = [];
-let UID_COUNTER = 1;
-function uid(prefix) { return prefix + (UID_COUNTER++); }
-function slugify(str) { return str.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
-function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function isShake(food) { return food.tags && food.tags.includes('shake'); }
-
-// Load foods.json
-async function loadFoods() {
-  const res = await fetch('foods.json');
-  const data = await res.json();
-  const seen = new Set();
-
-  FOODS = data.map(raw => {
-    const id = slugify(raw.name);
-    if (seen.has(id)) return null;
-    seen.add(id);
-    const entry = {
-      id, name: raw.name, tags: raw.tags || [],
-      kcal: raw.kcal, p: raw.p, c: raw.c, f: raw.f,
-      portionable: raw.portionable || false,
-      min: raw.min || 1, max: raw.max || 1, unit: raw.unit || ''
-    };
-    return entry;
-  }).filter(Boolean);
+// ------------------------------
+// Utility Functions
+// ------------------------------
+function uid(prefix) {
+  window.UID_COUNTER++;
+  return prefix + window.UID_COUNTER;
 }
 
-// Pick a portion of a food
-function pickPortion(food) {
-  let qty = food.portionable ? rand(food.min, food.max) : 1;
-  return {
-    ...food, qty,
-    kcal: food.kcal * qty, p: food.p * qty, c: food.c * qty, f: food.f * qty,
-    _uid: uid('i')
-  };
+function slugify(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function sample(arr) {
+  return arr[rand(0, arr.length - 1)];
+}
+
+function isShake(food) {
+  return food.tags && food.tags.includes("shake");
+}
+
+// ------------------------------
+// Load Foods
+// ------------------------------
+async function loadFoods() {
+  const res = await fetch("foods.json");
+  const rawFoods = await res.json();
+
+  const seen = new Set();
+  window.FOODS = rawFoods
+    .map((f) => {
+      const id = slugify(f.name);
+      if (seen.has(id)) return null;
+      seen.add(id);
+      return {
+        id,
+        name: f.name,
+        kcal: f.kcal,
+        p: f.p,
+        c: f.c,
+        f: f.f,
+        tags: f.tags || [],
+        portionable: f.portionable || false,
+        min: f.min || 1,
+        max: f.max || 1,
+        unit: f.unit || "",
+      };
+    })
+    .filter(Boolean);
 }
