@@ -1,48 +1,52 @@
-// mealBuilder.js
-import { getFoods, pickPortion, sample } from "./foods.js";
+// mealBuilder.js — handles meal/day building logic
+import { rand, clamp, pickPortion } from "./foods.js";
 
-let UID_COUNTER = 1;
-function uid() {
-  return "f" + UID_COUNTER++;
+// --- Meal order ---
+function buildMealOrder() {
+  return ["breakfast", "lunch", "snack", "dinner"];
 }
 
-// ---------------------------
-// Build a single meal
-function buildMeal(options = {}) {
-  const foods = getFoods();
-  const count = options.count || 2 + Math.floor(Math.random() * 2); // 2–3 items
-  const meal = { items: [] };
+// --- Foods by meal type ---
+function foodsForMealIndex(foods, mealType) {
+  return foods.filter(f => f.tags && f.tags.includes(mealType));
+}
 
-  for (let i = 0; i < count; i++) {
-    const f = pickPortion(sample(foods));
-    if (f) {
-      f._uid = uid();
-      f.label = `${f.name} ${f.qty}${f.unit || ""}`;
-      meal.items.push(f);
-    }
-  }
+// --- Meal builder ---
+function buildMeal(foods, mealType) {
+  const pool = foodsForMealIndex(foods, mealType);
+  if (!pool.length) return [];
+
+  const meal = [];
+  const chosen = rand(pool);
+  const portion = pickPortion(chosen);
+
+  meal.push({
+    ...chosen,
+    qty: portion.qty,
+    unit: portion.unit,
+  });
+
   return meal;
 }
 
-// ---------------------------
-// Build a whole day
-export function tryBuildDay(arg1, arg2, arg3, arg4) {
-  let mealCount, options;
-  if (typeof arg1 === "object") {
-    // called like tryBuildDay({ mealCount, targets, ... })
-    options = arg1;
-    mealCount = options.mealCount || 4;
-  } else {
-    // called like tryBuildDay(mealCount, targets, maxShakes, maxRepeats)
-    mealCount = arg1 || 4;
-    options = { mealCount, targets: arg2, maxShakes: arg3, maxRepeats: arg4 };
+// --- Day builder with retries ---
+function tryBuildDay(foods, tries = 10) {
+  for (let i = 0; i < tries; i++) {
+    const plan = {};
+    let ok = true;
+
+    for (const mealType of buildMealOrder()) {
+      const meal = buildMeal(foods, mealType);
+      if (!meal.length) {
+        ok = false;
+        break;
+      }
+      plan[mealType] = meal;
+    }
+
+    if (ok) return plan;
   }
-
-  const plan = { mealCount, meals: [] };
-
-  for (let i = 0; i < mealCount; i++) {
-    plan.meals.push(buildMeal({}));
-  }
-
-  return plan;
+  return null;
 }
+
+export { buildMealOrder, foodsForMealIndex, buildMeal, tryBuildDay };
