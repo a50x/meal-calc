@@ -137,26 +137,26 @@ function pickPortion(food, forcedQty = null) {
   const baseC = Number(food.c || food.carbs || 0);
   const baseF = Number(food.f || food.fat || 0);
 
-  // decide qty
   let qty = 1;
 
   if (forcedQty !== null && forcedQty !== undefined) {
     qty = forcedQty;
   } else if (food.portion_scalable !== undefined && food.portion_scalable !== null) {
-    // use portion_scalable step between 0.25 and 2.0 (clamped)
+    // Use portion_scalable step, respect food min/max if available
     const step = Number(food.portion_scalable) || 0.25;
-    const minQ = 0.25;
-    const maxQ = 2.0;
-    // generate list of allowed values (snap)
+    const minQ = Math.max(step, food.min ?? step);
+    const maxQ = Math.max(minQ, food.max ?? 2.0);
+
     const values = [];
-    // ensure numerical stability
     for (let v = minQ; v <= maxQ + 1e-9; v = +(v + step).toFixed(8)) {
       const snapped = Math.round(v / step) * step;
-      if (snapped >= minQ - 1e-9 && snapped <= maxQ + 1e-9) values.push(+snapped.toFixed(6));
-      // prevent infinite loops
-      if (values.length > 200) break;
+      if (snapped >= minQ - 1e-9 && snapped <= maxQ + 1e-9) {
+        values.push(+snapped.toFixed(6));
+      }
+      if (values.length > 200) break; // safety
     }
-    if (!values.length) values.push(1);
+
+    if (!values.length) values.push(minQ);
     qty = _sample(values);
   } else if (food.portionable && (food.min !== undefined || food.max !== undefined)) {
     const minQInt = Math.max(1, Number(food.min || 1));
