@@ -200,4 +200,3 @@ window.rand = _rand;
 window.slugify = _slugify;
 window.uid = _uid;
 window.isShake = _isShake;
-
